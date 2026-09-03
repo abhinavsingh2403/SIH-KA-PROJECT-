@@ -1,10 +1,11 @@
-import { useState, useRef, useMemo } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { useState, useRef, useMemo, useEffect } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { type LiveTelemetryPacket } from "../types/telemetry";
 
 export type RenderMode = "solid" | "flir" | "xray";
+export type CameraPreset = "iso" | "top" | "side" | "front";
 
 export interface SceneConfig {
   wireframe: boolean;
@@ -17,6 +18,7 @@ export interface SceneConfig {
   rpm: number;
   explodedView: boolean;
   renderMode?: RenderMode;
+  cameraPreset?: CameraPreset;
 }
 
 // Aerospace Palettes
@@ -571,6 +573,26 @@ function AeroPistonEngine({
   );
 }
 
+// ─── Camera Perspective Controller ──────────────────────────────────────────────
+
+function CameraController({ preset }: { preset?: CameraPreset }) {
+  const { camera } = useThree();
+  const targetPos = useRef(new THREE.Vector3(5.2, 3.6, 5.8));
+
+  useEffect(() => {
+    if (preset === "top") targetPos.current.set(0, 8.5, 0.1);
+    else if (preset === "side") targetPos.current.set(6.8, 0.8, 0);
+    else if (preset === "front") targetPos.current.set(0, 0.6, 7.2);
+    else targetPos.current.set(5.2, 3.6, 5.8);
+  }, [preset]);
+
+  useFrame((_, delta) => {
+    camera.position.lerp(targetPos.current, delta * 3.5);
+  });
+
+  return null;
+}
+
 // ─── Root 3D Canvas Scene Viewport ──────────────────────────────────────────────
 
 export function Scene3D({
@@ -591,6 +613,9 @@ export function Scene3D({
         dpr={[1, 2]}
         gl={{ antialias: true, powerPreference: "high-performance" }}
       >
+        {/* Dynamic Camera Perspective Transition */}
+        <CameraController preset={config.cameraPreset} />
+
         {/* Aerospace Cleanroom Studio Environment */}
         <color attach="background" args={["#f1f5f9"]} />
         <fog attach="fog" args={["#f1f5f9", 14, 35]} />

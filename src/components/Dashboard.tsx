@@ -23,6 +23,9 @@ import {
   Thermometer,
   Database,
   CheckCircle2,
+  FileText,
+  Download,
+  Printer,
 } from "lucide-react";
 import { Scene3D, type SceneConfig, PALETTES } from "./Scene3D";
 import { TelemetryCharts } from "./TelemetryCharts";
@@ -142,6 +145,7 @@ export function Dashboard({
   const [supabaseFlights, setSupabaseFlights] = useState<any[]>([]);
   const [supabaseAlerts, setSupabaseAlerts] = useState<any[]>([]);
   const [isSyncingSupabase, setIsSyncingSupabase] = useState(false);
+  const [showDebriefModal, setShowDebriefModal] = useState(false);
 
   useEffect(() => {
     if (livePacket) {
@@ -394,6 +398,16 @@ export function Dashboard({
 
         {/* Right: Federated Fleet Trigger, Supabase DB & Link Status */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* Official Sortie Debrief Report Trigger */}
+          <button
+            onClick={() => setShowDebriefModal(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg border bg-sky-50 text-sky-800 border-sky-300 shadow-xs hover:bg-sky-100 transition-all cursor-pointer whitespace-nowrap"
+            title="Open Sortie Debrief & Accident Investigation Board Report"
+          >
+            <FileText className="w-3.5 h-3.5 text-sky-600" />
+            <span>DEBRIEF</span>
+          </button>
+
           {/* Supabase Cloud Database Explorer */}
           <button
             onClick={() => {
@@ -525,6 +539,28 @@ export function Dashboard({
                     className={`px-1.5 py-0.5 rounded text-[10px] font-mono-tech font-bold uppercase transition-all cursor-pointer ${
                       (config.renderMode || "solid") === id
                         ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Camera Perspective Presets */}
+              <div className="hidden sm:flex items-center bg-slate-100 p-0.5 rounded-md border border-slate-200">
+                {[
+                  { id: "iso", label: "ISO" },
+                  { id: "top", label: "TOP" },
+                  { id: "side", label: "SIDE" },
+                  { id: "front", label: "FRONT" },
+                ].map(({ id, label }) => (
+                  <button
+                    key={id}
+                    onClick={() => onChange({ cameraPreset: id as any })}
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-mono-tech font-bold uppercase transition-all cursor-pointer ${
+                      (config.cameraPreset || "iso") === id
+                        ? "bg-sky-600 text-white shadow-xs"
                         : "text-slate-500 hover:text-slate-800"
                     }`}
                   >
@@ -1233,6 +1269,192 @@ export function Dashboard({
               >
                 Close Explorer
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── 6. DRDO Sortie Debrief & Incident Investigation Board Report ───── */}
+      {showDebriefModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-2xl w-full p-5 space-y-4 max-h-[90vh] flex flex-col">
+            {/* Report Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-orange-50 text-orange-600 border border-orange-200">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-black text-slate-900 tracking-tight">
+                      DRDO AERONAUTICAL INCIDENT & SORTIE DEBRIEF
+                    </h3>
+                    <span className={`text-[9px] font-mono-tech font-bold px-1.5 py-0.5 rounded ${
+                      healthScore < 40
+                        ? "bg-red-100 text-red-800"
+                        : healthScore < 70
+                        ? "bg-amber-100 text-amber-800"
+                        : "bg-emerald-100 text-emerald-800"
+                    }`}>
+                      {healthScore < 40 ? "ABORT / GROUNDED" : healthScore < 70 ? "CAUTION ADVISORY" : "AIRWORTHY"}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-mono-tech">
+                    FORM DRDO-ADE-26054 • ROTAX-LYCOMING DIGITAL TWIN PROXY
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDebriefModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold px-2 py-1 rounded cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Scrollable Report Body */}
+            <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 text-xs">
+              {/* Sortie Metadata Table */}
+              <div className="grid grid-cols-4 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200 font-mono-tech text-[11px]">
+                <div>
+                  <span className="text-[9px] text-slate-400 block font-bold">UAV TAIL</span>
+                  <span className="font-bold text-slate-800">TAPAS-04 (MALE)</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 block font-bold">SORTIE ID</span>
+                  <span className="font-bold text-sky-700 truncate block">{livePacket?.flight_id || "flight_demo"}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 block font-bold">REGIME</span>
+                  <span className="font-bold text-slate-800 uppercase">{activeProfile}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 block font-bold">MET DURATION</span>
+                  <span className="font-bold text-slate-800">T+{formatTime(currentFlightTime)}</span>
+                </div>
+              </div>
+
+              {/* Thermodynamic Envelope Assessment */}
+              <div className="border border-slate-200 rounded-lg overflow-hidden">
+                <div className="bg-slate-100 px-3 py-1.5 font-bold text-[11px] text-slate-700">
+                  I. Thermodynamic & Electrical Envelope Peak Telemetry
+                </div>
+                <div className="p-3 grid grid-cols-5 gap-2 text-center font-mono-tech">
+                  <div className="p-2 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-[9px] text-slate-400 block">PEAK CHT</span>
+                    <span className={`text-sm font-bold ${maxCht > 200 ? "text-red-600" : "text-slate-800"}`}>
+                      {Math.round(maxCht)}°C
+                    </span>
+                    <span className="text-[8px] text-slate-400 block">Limit 220°C</span>
+                  </div>
+                  <div className="p-2 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-[9px] text-slate-400 block">PEAK EGT</span>
+                    <span className="text-sm font-bold text-slate-800">
+                      {Math.round(Math.max(...egts))}°C
+                    </span>
+                    <span className="text-[8px] text-slate-400 block">Limit 850°C</span>
+                  </div>
+                  <div className="p-2 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-[9px] text-slate-400 block">EGT SPREAD</span>
+                    <span className="text-sm font-bold text-sky-700">
+                      {Math.round(egtSpread)}°C
+                    </span>
+                    <span className="text-[8px] text-slate-400 block">Nominal &lt;50°C</span>
+                  </div>
+                  <div className="p-2 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-[9px] text-slate-400 block">OIL PRESS</span>
+                    <span className={`text-sm font-bold ${oilP < 45 ? "text-red-600" : "text-amber-600"}`}>
+                      {Math.round(oilP)} psi
+                    </span>
+                    <span className="text-[8px] text-slate-400 block">Band 45–80</span>
+                  </div>
+                  <div className="p-2 bg-slate-50 rounded border border-slate-200">
+                    <span className="text-[9px] text-slate-400 block">BUS 1 DC</span>
+                    <span className="text-sm font-bold text-emerald-600">
+                      {bus1V.toFixed(1)} V
+                    </span>
+                    <span className="text-[8px] text-slate-400 block">Nominal 28V</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* FMEA Diagnostic Findings */}
+              <div className="border border-slate-200 rounded-lg overflow-hidden">
+                <div className="bg-slate-100 px-3 py-1.5 font-bold text-[11px] text-slate-700">
+                  II. FMEA Diagnostic & Machine Learning Classification
+                </div>
+                <div className="p-3 space-y-2">
+                  <div className="flex items-center justify-between font-mono-tech text-[11px]">
+                    <span className="text-slate-500">Stage 1 Edge Anomaly Detector:</span>
+                    <span className={`font-bold ${isAnomalous ? "text-red-600" : "text-emerald-600"}`}>
+                      {isAnomalous ? "TRIGGERED (Residual Z-Score &gt; 3.0)" : "NEGATIVE (Envelope Nominal)"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between font-mono-tech text-[11px]">
+                    <span className="text-slate-500">Stage 2 1D-CNN Isolated Fault:</span>
+                    <span className="font-bold text-slate-900 uppercase">
+                      {diagnosedFault.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between font-mono-tech text-[11px]">
+                    <span className="text-slate-500">Classification Confidence:</span>
+                    <span className="font-bold text-sky-700">
+                      {livePacket?.alerts?.[0]?.confidence ? `${Math.round(livePacket.alerts[0].confidence * 100)}%` : "98.2% Nominal"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Engineering Directives & Pilot Advisory */}
+              <div className="p-3 bg-sky-50/70 border border-sky-200 rounded-lg space-y-1.5 text-slate-800">
+                <span className="font-bold text-sky-900 text-xs flex items-center gap-1.5">
+                  <Bot className="w-3.5 h-3.5 text-sky-700" />
+                  III. Automated Aeronautical Engineering Directive
+                </span>
+                <p className="text-[11px] leading-relaxed">
+                  {livePacket?.alerts?.[0]?.report_text || healthRec}
+                </p>
+              </div>
+            </div>
+
+            {/* Report Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold cursor-pointer transition-all shadow-xs"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print Official Report</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(
+                      ["timestamp,rpm,health_score,volt1,volt2,amp1,amp2,E1_FFlow,E1_OilT,E1_OilP,E1_CHT1,E1_CHT2,E1_CHT3,E1_CHT4,E1_EGT1,E1_EGT2,E1_EGT3,E1_EGT4"]
+                        .concat(history.map(h => `${h.t},${h.rpm},${h.mission_risk.health_score},${Object.values(h.channels).join(",")}`))
+                        .join("\n")
+                    );
+                    const link = document.createElement("a");
+                    link.setAttribute("href", csvContent);
+                    link.setAttribute("download", `telemetry_debrief_${livePacket?.flight_id || "sortielog"}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold cursor-pointer transition-all shadow-xs"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Telemetry CSV</span>
+                </button>
+
+                <button
+                  onClick={() => setShowDebriefModal(false)}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-all"
+                >
+                  Close Debrief
+                </button>
+              </div>
             </div>
           </div>
         </div>

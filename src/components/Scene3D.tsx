@@ -88,9 +88,6 @@ function PistonCylinder({
   const pistonRef = useRef<THREE.Mesh>(null);
   const rodRef = useRef<THREE.Mesh>(null);
 
-  const isOverheating = tempC > 195;
-  const isCritical = tempC > 225;
-
   // Reciprocating internal piston motion in X-Ray mode
   useFrame(({ clock }) => {
     if (renderMode === "xray" && pistonRef.current && rodRef.current) {
@@ -112,24 +109,18 @@ function PistonCylinder({
   const headColor = useMemo(() => {
     if (renderMode === "flir") return getFlirThermalColor(tempC);
     if (renderMode === "xray") return "#cbd5e1";
-    if (isCritical) return "#dc2626";
-    if (isOverheating) return "#ea580c";
-    return "#64748b";
-  }, [renderMode, tempC, isCritical, isOverheating]);
+    return hovered ? "#475569" : "#64748b";
+  }, [renderMode, tempC, hovered]);
 
   const headEmissive = useMemo(() => {
     if (renderMode === "flir") return getFlirThermalColor(tempC);
-    if (isCritical) return "#ef4444";
-    if (isOverheating) return "#f97316";
     return "#000000";
-  }, [renderMode, tempC, isCritical, isOverheating]);
+  }, [renderMode, tempC]);
 
   const headEmissiveIntensity = useMemo(() => {
     if (renderMode === "flir") return 0.5;
-    if (isCritical) return 0.9;
-    if (isOverheating) return 0.5;
     return 0.0;
-  }, [renderMode, isCritical, isOverheating]);
+  }, [renderMode]);
 
   const isXray = renderMode === "xray";
 
@@ -246,9 +237,9 @@ function PistonCylinder({
       <mesh position={[0.42, 0.85, -0.22]} rotation={[0.4, 0.2, 0.8]}>
         <cylinderGeometry args={[0.12, 0.12, 0.85, 20]} />
         <meshStandardMaterial
-          color={renderMode === "flir" ? getFlirThermalColor(egtC * 0.35) : (isOverheating ? "#ea580c" : "#475569")}
-          emissive={isOverheating ? "#ea580c" : "#000000"}
-          emissiveIntensity={isOverheating ? 0.7 : 0.0}
+          color={renderMode === "flir" ? getFlirThermalColor(egtC * 0.35) : "#475569"}
+          emissive={renderMode === "flir" ? getFlirThermalColor(egtC * 0.35) : "#000000"}
+          emissiveIntensity={renderMode === "flir" ? 0.5 : 0.0}
           roughness={0.4}
           metalness={0.8}
           wireframe={wireframe}
@@ -519,9 +510,9 @@ function AeroPistonEngine({
         <mesh>
           <boxGeometry args={[1.05, 0.32, 0.75]} />
           <meshStandardMaterial
-            color={isOilFault ? "#dc2626" : "#475569"}
-            emissive={isOilFault ? "#dc2626" : "#000000"}
-            emissiveIntensity={isOilFault ? 0.85 : 0.0}
+            color={renderMode === "flir" ? (isOilFault ? "#dc2626" : "#0284c7") : "#475569"}
+            emissive={renderMode === "flir" && isOilFault ? "#dc2626" : "#000000"}
+            emissiveIntensity={renderMode === "flir" && isOilFault ? 0.8 : 0.0}
             metalness={0.8}
             roughness={0.3}
             wireframe={config.wireframe}
@@ -549,9 +540,9 @@ function AeroPistonEngine({
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.32, 0.32, 0.55, 24]} />
           <meshStandardMaterial
-            color={isAltFault ? "#d97706" : "#64748b"}
-            emissive={isAltFault ? "#d97706" : "#000000"}
-            emissiveIntensity={isAltFault ? 0.8 : 0.0}
+            color={renderMode === "flir" ? (isAltFault ? "#d97706" : "#0284c7") : "#64748b"}
+            emissive={renderMode === "flir" && isAltFault ? "#d97706" : "#000000"}
+            emissiveIntensity={renderMode === "flir" && isAltFault ? 0.8 : 0.0}
             metalness={0.85}
             roughness={0.25}
             wireframe={config.wireframe}
@@ -629,7 +620,6 @@ export function Scene3D({
   livePacket: LiveTelemetryPacket | null;
   onSelectCylinder: (id: number) => void;
 }) {
-  const activePalette = PALETTES[config.paletteKey] || PALETTES.isro;
   const controlsRef = useRef<any>(null);
 
   return (
@@ -649,12 +639,12 @@ export function Scene3D({
         {/* HDRI Studio Lighting Reflection Map */}
         <Environment preset="city" />
 
-        {/* Studio Lighting Rig */}
-        <ambientLight intensity={0.9} />
+        {/* Studio Lighting Rig (Neutral High-Fidelity Aerospace Studio) */}
+        <ambientLight intensity={1.1} />
         <directionalLight position={[10, 16, 12]} intensity={2.2} color="#ffffff" />
-        <directionalLight position={[-8, 6, -6]} intensity={0.95} color="#bae6fd" />
-        <pointLight position={[0, 4, 3]} intensity={0.8} color={activePalette.secondary} />
-        <pointLight position={[0, -2, -4]} intensity={0.5} color={activePalette.primary} />
+        <directionalLight position={[-8, 6, -6]} intensity={0.95} color="#e0f2fe" />
+        <pointLight position={[0, 4, 3]} intensity={0.4} color="#ffffff" />
+        <pointLight position={[0, -2, -4]} intensity={0.3} color="#f8fafc" />
 
         {/* Precision Test Cell Floor Grid */}
         <gridHelper args={[24, 24, "#94a3b8", "#cbd5e1"]} position={[0, -1.8, 0]} />

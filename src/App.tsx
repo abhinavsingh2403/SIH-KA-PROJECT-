@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { Scene3D, type SceneConfig } from "./components/Scene3D";
-import { OverlayHUD } from "./components/OverlayHUD";
+import { type SceneConfig } from "./components/Scene3D";
+import { Dashboard } from "./components/Dashboard";
 import { useTelemetrySocket } from "./lib/useTelemetrySocket";
 
 export function App() {
   const [sceneConfig, setSceneConfig] = useState<SceneConfig>({
     wireframe: false,
     autoRotate: true,
-    rotationSpeed: 1.0,
+    rotationSpeed: 0.8,
     particleDensity: 2000,
-    paletteKey: "cyber",
+    paletteKey: "isro", // Default ISRO mission control theme
     selectedCylinder: null,
     activeFault: null,
     rpm: 2450,
@@ -30,45 +30,26 @@ export function App() {
     setSceneConfig((prev) => ({ ...prev, ...updated }));
   };
 
-  const handleSelectCylinder = (id: number) => {
-    setSceneConfig((prev) => ({
-      ...prev,
-      selectedCylinder: prev.selectedCylinder === id ? null : id,
-    }));
-  };
-
   const handleLiveInjectFault = (faultType: string, targetCylinder?: number, severity?: number) => {
-    // 1. Update local visual state
     setSceneConfig((prev) => ({
       ...prev,
-      activeFault: faultType,
+      activeFault: faultType === "normal" ? null : faultType,
       selectedCylinder: targetCylinder || prev.selectedCylinder,
     }));
-    // 2. Send command to backend physics engine if connected
     injectFault(faultType, targetCylinder || 2, severity || 0.85);
   };
 
   return (
-    <main className="relative w-screen h-screen overflow-hidden bg-[#050811]">
-      {/* 3D WebGL Aero Piston Digital Twin with Exploded View */}
-      <Scene3D
-        config={sceneConfig}
-        livePacket={packet}
-        onSelectCylinder={handleSelectCylinder}
-      />
-
-      {/* Interactive Command Center HUD */}
-      <OverlayHUD
-        config={sceneConfig}
-        livePacket={packet}
-        isConnected={isConnected}
-        onPause={pause}
-        onResume={resume}
-        onSetSpeed={setSpeed}
-        onInjectFault={handleLiveInjectFault}
-        onChange={handleConfigChange}
-      />
-    </main>
+    <Dashboard
+      config={sceneConfig}
+      livePacket={packet}
+      isConnected={isConnected}
+      onPause={pause}
+      onResume={resume}
+      onSetSpeed={setSpeed}
+      onInjectFault={handleLiveInjectFault}
+      onChange={handleConfigChange}
+    />
   );
 }
 

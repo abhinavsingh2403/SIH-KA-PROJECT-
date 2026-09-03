@@ -1,6 +1,6 @@
 import { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Stars, Float } from "@react-three/drei";
+import { OrbitControls, Float } from "@react-three/drei";
 import * as THREE from "three";
 import { type LiveTelemetryPacket } from "../types/telemetry";
 
@@ -17,35 +17,23 @@ export interface SceneConfig {
 }
 
 export const PALETTES: Record<string, { primary: string; secondary: string; glow: string; name: string }> = {
-  cyber: {
-    name: "Midnight Cyber Neon",
-    primary: "#8b5cf6",
-    secondary: "#06b6d4",
-    glow: "#f43f5e",
+  isro: {
+    name: "ISRO Mission Control",
+    primary: "#ea580c", // ISRO Rocket Saffron
+    secondary: "#0284c7", // Aerospace Sky Blue
+    glow: "#f97316",
   },
-  gold: {
-    name: "Luxury Onyx & Gold",
-    primary: "#d97706",
-    secondary: "#f59e0b",
-    glow: "#fbbf24",
+  nasa: {
+    name: "NASA Deep Blue",
+    primary: "#0f172a", // NASA Navy
+    secondary: "#0284c7", // Precision Sky
+    glow: "#38bdf8",
   },
-  emerald: {
-    name: "Nordic Emerald",
-    primary: "#10b981",
-    secondary: "#38bdf8",
-    glow: "#34d399",
-  },
-  synthwave: {
-    name: "Tokyo Synthwave",
-    primary: "#ff2a85",
-    secondary: "#00f0ff",
-    glow: "#ffb800",
-  },
-  cosmic: {
-    name: "Ethereal Cosmic Void",
-    primary: "#6366f1",
-    secondary: "#a855f7",
-    glow: "#14b8a6",
+  defense: {
+    name: "DRDO Defense Titanium",
+    primary: "#334155", // Titanium Armor
+    secondary: "#059669", // Avionics Emerald
+    glow: "#10b981",
   },
 };
 
@@ -350,49 +338,6 @@ function AeroPistonEngine({
   );
 }
 
-// ─── Ambient Particle Cloud ─────────────────────────────────────────────────────
-
-function ParticleSwarm({ count, color }: { count: number; color: string }) {
-  const pointsRef = useRef<THREE.Points>(null);
-
-  const positions = useMemo(() => {
-    const pos = new Float32Array(count * 3);
-    const radius = 10;
-    for (let i = 0; i < count; i++) {
-      const theta = THREE.MathUtils.randFloatSpread(360);
-      const phi = THREE.MathUtils.randFloatSpread(360);
-      const distance = 3.0 + Math.random() * radius;
-      pos[i * 3] = distance * Math.sin(theta) * Math.cos(phi);
-      pos[i * 3 + 1] = distance * Math.sin(theta) * Math.sin(phi);
-      pos[i * 3 + 2] = distance * Math.cos(theta);
-    }
-    return pos;
-  }, [count]);
-
-  useFrame((_, delta) => {
-    if (pointsRef.current) {
-      pointsRef.current.rotation.y += delta * 0.04;
-      pointsRef.current.rotation.x += delta * 0.01;
-    }
-  });
-
-  return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-      </bufferGeometry>
-      <pointsMaterial
-        size={0.06}
-        color={color}
-        transparent
-        opacity={0.65}
-        blending={THREE.AdditiveBlending}
-        depthWrite={false}
-      />
-    </points>
-  );
-}
-
 // ─── Scene3D Main Export ────────────────────────────────────────────────────────
 
 export function Scene3D({
@@ -404,37 +349,37 @@ export function Scene3D({
   livePacket?: LiveTelemetryPacket | null;
   onSelectCylinder: (id: number) => void;
 }) {
-  const activePalette = PALETTES[config.paletteKey] || PALETTES.cyber;
+  const activePalette = PALETTES[config.paletteKey] || PALETTES.isro;
 
   return (
-    <div className="canvas-container">
+    <div className="w-full h-full relative overflow-hidden rounded-xl bg-slate-100 border border-slate-200 shadow-inner">
       <Canvas
-        camera={{ position: [5.2, 3.6, 5.8], fov: 40 }}
+        camera={{ position: [5.2, 3.6, 5.8], fov: 38 }}
         dpr={[1, 2]}
         gl={{ antialias: true, powerPreference: "high-performance" }}
       >
-        <color attach="background" args={["#050811"]} />
+        {/* Aerospace Cleanroom Studio Environment */}
+        <color attach="background" args={["#f1f5f9"]} />
+        <fog attach="fog" args={["#f1f5f9", 14, 35]} />
 
         {/* Studio Lighting Rig */}
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[8, 12, 10]} intensity={1.8} color="#f8fafc" />
-        <directionalLight position={[-8, -6, -5]} intensity={0.8} color={activePalette.primary} />
-        <pointLight position={[0, 3, 2]} intensity={1.2} color={activePalette.secondary} />
+        <ambientLight intensity={0.8} />
+        <directionalLight position={[10, 15, 12]} intensity={2.2} color="#ffffff" />
+        <directionalLight position={[-8, 6, -6]} intensity={0.9} color="#bae6fd" />
+        <pointLight position={[0, 4, 3]} intensity={1.0} color={activePalette.secondary} />
+        <pointLight position={[0, -2, -4]} intensity={0.6} color={activePalette.primary} />
+
+        {/* Test Cell Ground Bench Grid */}
+        <gridHelper args={[24, 24, "#94a3b8", "#cbd5e1"]} position={[0, -1.8, 0]} />
 
         {/* 4-Cylinder Aero Engine Digital Twin */}
-        <Float speed={1.2} rotationIntensity={0.15} floatIntensity={0.3}>
+        <Float speed={1.0} rotationIntensity={0.08} floatIntensity={0.15}>
           <AeroPistonEngine
             config={config}
             livePacket={livePacket}
             onSelectCylinder={onSelectCylinder}
           />
         </Float>
-
-        {/* Particle Cloud */}
-        <ParticleSwarm count={config.particleDensity} color={activePalette.secondary} />
-
-        {/* Cosmos Backdrop */}
-        <Stars radius={120} depth={60} count={3500} factor={3} saturation={0} fade speed={0.8} />
 
         {/* Orbit Camera Controls */}
         <OrbitControls
@@ -443,7 +388,7 @@ export function Scene3D({
           autoRotate={config.autoRotate}
           autoRotateSpeed={config.rotationSpeed}
           maxDistance={22}
-          minDistance={2.5}
+          minDistance={2.2}
         />
       </Canvas>
     </div>

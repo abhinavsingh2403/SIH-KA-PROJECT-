@@ -12,10 +12,10 @@
     "semantic_hash": "5e60e462d34545ef9000f729c28273eb"
   },
   "src/App.tsx": {
-    "mtime": 1788445523.5130243,
-    "seen": 1788445617.6007318,
-    "ast_hash": "03cbb93c2e0100fa692f6244ae72e6f3",
-    "semantic_hash": "03cbb93c2e0100fa692f6244ae72e6f3"
+    "mtime": 1788446078.5405407,
+    "seen": 1788446192.2486365,
+    "ast_hash": "283c50d320d93327222a45dc5d6ba50e",
+    "semantic_hash": "283c50d320d93327222a45dc5d6ba50e"
   },
   "src/components/OverlayHUD.tsx": {
     "mtime": 1788445555.3831172,
@@ -24,10 +24,10 @@
     "semantic_hash": "97b2c409e187179ee22cfca603dd3b5e"
   },
   "src/components/Scene3D.tsx": {
-    "mtime": 1788445493.6522074,
-    "seen": 1788445617.6007402,
-    "ast_hash": "ec0d223620972fbffc7f5f80bde25e78",
-    "semantic_hash": "ec0d223620972fbffc7f5f80bde25e78"
+    "mtime": 1788446048.1840558,
+    "seen": 1788446192.249096,
+    "ast_hash": "6dc4fafd0f629b1ad067b2ee8510139c",
+    "semantic_hash": "6dc4fafd0f629b1ad067b2ee8510139c"
   },
   "src/lib/motion.ts": {
     "mtime": 1788441962.0370097,
@@ -238,5 +238,17 @@
     "seen": 1788445617.6010923,
     "ast_hash": "7d04f9a8339cdb36834a65777109e7b9",
     "semantic_hash": "7d04f9a8339cdb36834a65777109e7b9"
+  },
+  "src/components/Dashboard.tsx": {
+    "mtime": 1788446125.2141476,
+    "seen": 1788446192.248644,
+    "ast_hash": "f3e71842f910fc6237a0bdb49a0dac28",
+    "semantic_hash": "f3e71842f910fc6237a0bdb49a0dac28"
+  },
+  "src/components/TelemetryCharts.tsx": {
+    "mtime": 1788446154.539697,
+    "seen": 1788446192.2491014,
+    "ast_hash": "a157b72b989ecb6d1e2321a4872001cd",
+    "semantic_hash": "a157b72b989ecb6d1e2321a4872001cd"
   }
 }

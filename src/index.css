@@ -1,58 +1,90 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #0b0f19;
-  --accent-violet: #8b5cf6;
-  --accent-cyan: #06b6d4;
-  --accent-coral: #f43f5e;
+  --bg-app: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f1f5f9;
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
+
+  --isro-orange: #ea580c;
+  --isro-saffron: #f97316;
+  --nasa-blue: #0284c7;
+  --nasa-dark: #0f172a;
+
+  --status-nominal: #059669;
+  --status-caution: #d97706;
+  --status-critical: #dc2626;
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: #070a13;
-  color: #f1f5f9;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
 }
 
-.glass-card {
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  border-radius: 1rem;
+/* Aerospace Technical Grid Background */
+.aerospace-grid-bg {
+  background-color: #f8fafc;
+  background-image: 
+    linear-gradient(to right, rgba(226, 232, 240, 0.8) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 232, 240, 0.8) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 
-.glass-card-hover {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.glass-card-hover:hover {
-  border-color: rgba(139, 92, 246, 0.4);
-  box-shadow: 0 12px 40px 0 rgba(139, 92, 246, 0.2);
-  transform: translateY(-2px);
-}
-
-.text-gradient {
-  background: linear-gradient(135deg, #a855f7, #06b6d4, #f43f5e);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* Clean Aerospace Console Panel */
+.aero-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
+  border-radius: 0.75rem;
 }
 
-.text-gradient-cyan {
-  background: linear-gradient(135deg, #38bdf8, #818cf8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.aero-panel-header {
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+  padding: 0.625rem 1rem;
+  border-top-left-radius: 0.75rem;
+  border-top-right-radius: 0.75rem;
 }
 
-.canvas-container {
-  width: 100vw;
-  height: 100vh;
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 0;
+/* Technical Monospace Metrics */
+.font-mono-tech {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-feature-settings: "tnum" on, "zero" on;
+}
+
+/* Custom Scrollbar for Telemetry Panels */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* SVG Chart Elements */
+.chart-grid-line {
+  stroke: #e2e8f0;
+  stroke-dasharray: 2 3;
+}
+.chart-threshold-caution {
+  stroke: #f59e0b;
+  stroke-dasharray: 4 4;
+}
+.chart-threshold-critical {
+  stroke: #ef4444;
+  stroke-dasharray: 4 4;
 }

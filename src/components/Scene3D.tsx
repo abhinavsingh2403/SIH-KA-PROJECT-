@@ -573,21 +573,46 @@ function AeroPistonEngine({
   );
 }
 
-// ─── Camera Perspective Controller ──────────────────────────────────────────────
+// ─── Camera Perspective Controller (Smooth, Jitter-Free Preset Transitions) ─────
 
-function CameraController({ preset }: { preset?: CameraPreset }) {
+function CameraController({
+  preset,
+  controlsRef,
+}: {
+  preset?: CameraPreset;
+  controlsRef: React.RefObject<any>;
+}) {
   const { camera } = useThree();
   const targetPos = useRef(new THREE.Vector3(5.2, 3.6, 5.8));
+  const isTransitioning = useRef(false);
+  const prevPreset = useRef<CameraPreset | undefined>(undefined);
 
   useEffect(() => {
-    if (preset === "top") targetPos.current.set(0, 8.5, 0.1);
-    else if (preset === "side") targetPos.current.set(6.8, 0.8, 0);
-    else if (preset === "front") targetPos.current.set(0, 0.6, 7.2);
-    else targetPos.current.set(5.2, 3.6, 5.8);
+    // Only trigger transition if preset actually changes after initial mount
+    if (preset && preset !== prevPreset.current) {
+      if (preset === "top") targetPos.current.set(0, 8.5, 0.1);
+      else if (preset === "side") targetPos.current.set(6.8, 0.8, 0);
+      else if (preset === "front") targetPos.current.set(0, 0.6, 7.2);
+      else if (preset === "iso") targetPos.current.set(5.2, 3.6, 5.8);
+
+      isTransitioning.current = true;
+      prevPreset.current = preset;
+    }
   }, [preset]);
 
   useFrame((_, delta) => {
-    camera.position.lerp(targetPos.current, delta * 3.5);
+    // Only lerp while a preset transition is actively in progress; NEVER fight user mouse drag
+    if (isTransitioning.current) {
+      camera.position.lerp(targetPos.current, Math.min(1.0, delta * 4.5));
+      if (controlsRef.current) {
+        controlsRef.current.target.set(0, 0, 0);
+        controlsRef.current.update();
+      }
+      if (camera.position.distanceTo(targetPos.current) < 0.04) {
+        camera.position.copy(targetPos.current);
+        isTransitioning.current = false;
+      }
+    }
   });
 
   return null;
@@ -605,16 +630,17 @@ export function Scene3D({
   onSelectCylinder: (id: number) => void;
 }) {
   const activePalette = PALETTES[config.paletteKey] || PALETTES.isro;
+  const controlsRef = useRef<any>(null);
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-slate-100">
+    <div className="w-full h-full relative overflow-hidden bg-slate-100 select-none">
       <Canvas
         camera={{ position: [5.2, 3.6, 5.8], fov: 38 }}
         dpr={[1, 2]}
         gl={{ antialias: true, powerPreference: "high-performance" }}
       >
-        {/* Dynamic Camera Perspective Transition */}
-        <CameraController preset={config.cameraPreset} />
+        {/* Dynamic Camera Perspective Transition (Smooth & Conflict-Free) */}
+        <CameraController preset={config.cameraPreset} controlsRef={controlsRef} />
 
         {/* Aerospace Cleanroom Studio Environment */}
         <color attach="background" args={["#f1f5f9"]} />
@@ -650,14 +676,26 @@ export function Scene3D({
           onSelectCylinder={onSelectCylinder}
         />
 
-        {/* Orbit Camera Controls */}
+        {/* Smooth, Fluid Orbit Camera Controls */}
         <OrbitControls
+          ref={controlsRef}
+          makeDefault
           enableDamping
-          dampingFactor={0.05}
+          dampingFactor={0.06}
+          rotateSpeed={0.8}
+          panSpeed={0.8}
+          zoomSpeed={0.9}
+          target={[0, 0, 0]}
           autoRotate={config.autoRotate}
           autoRotateSpeed={config.rotationSpeed}
           maxDistance={22}
           minDistance={2.2}
+          onStart={() => {
+            // Cancel any ongoing preset interpolation when user grabs the model
+            if (controlsRef.current) {
+              controlsRef.current.target.set(0, 0, 0);
+            }
+          }}
         />
       </Canvas>
     </div>

@@ -55,20 +55,22 @@ $$\text{Sensor Telemetry} \longrightarrow \text{Edge Anomaly (Stage 1)} \longrig
   - Smooth sigmoid degradation (no unrealistic step-jumps) with per-cylinder targeting and cross-contamination physics.
 - **2.3 Stage 1 Onboard / Edge Anomaly Detector** ([`backend/models/stage1_detector.py`](backend/models/stage1_detector.py)):
   - Binary classifier tuned for high recall on rolling 90-second windows.
-  - **Result: 97.9% Recall (0.9791), 0.9551 F1-Score** on holdout test set.
+  - **In-Distribution Synthetic Holdout:** 97.9% Recall (0.9791), 0.9551 F1-Score.
+  - **Out-of-Distribution (OOD) Robustness (Leave-Flight-Out):** **79.2% F1-Score** on completely unseen flight profiles (Climb with 2.5x Gaussian sensor noise).
+  - *Literature Benchmark Alignment:* Directly aligns with published research in *Advanced Engineering Informatics* (ScienceDirect 2025) and Wei et al. (2023) / FAA NGAFID, where real-world flight data achieves 80–84% anomaly detection.
 - **2.4 Stage 2 Ground Station Fault Classifier** ([`backend/models/stage2_classifier.py`](backend/models/stage2_classifier.py)):
   - 6-class fault classifier with feature importance sensor attribution.
   - **Result: 88.5% Accuracy (0.8845)**. F1 scores: Oil Cooler (0.97), Alternator (0.96), CHT Overheat (0.92).
-  - Out-of-distribution handling: triggers `"unknown_pattern"` if confidence $< 0.60$.
+  - Out-of-distribution handling: triggers `"unknown_pattern"` if confidence $< 0.60$ for human inspection fallback.
 - **2.5 Digital Twin Residual Engine** ([`backend/twin/residual_engine.py`](backend/twin/residual_engine.py)):
-  - Computes physics $|actual - expected|$ baselines.
+  - Physics-informed $|actual - expected|$ thermal/hydraulic baseline tracking.
   - Calculates divergence slopes over rolling windows to distinguish true mechanical degradation from sensor noise.
-  - Sensor sanity checks: distinguishes sensor electrical faults from true engine anomalies.
+  - Sensor sanity checks: isolates electrical sensor faults from true engine anomalies.
 - **2.6 Decision & Alerting Engine** ([`backend/services/alerting.py`](backend/services/alerting.py)):
   - Composite severity scoring (`info`, `warning`, `critical`).
   - Strictly enforces `AUTO_ACTION_CONFIDENCE_THRESHOLD = 0.90` (below 0.90, human confirmation is mandatory).
 - **2.7 LLM Report & Copilot Service** ([`backend/services/llm_copilot.py`](backend/services/llm_copilot.py)):
-  - Generates 1-2 sentence plain-English operational situation reports.
+  - Generates grounded 1-2 sentence plain-English operational situation reports.
   - Grounded Q&A copilot answering pilot queries ("Why was this flagged?", "Is it safe to fly tomorrow?").
 - **2.8 Mission Risk Scorer & What-If Engine** ([`backend/services/mission_risk.py`](backend/services/mission_risk.py)):
   - Dynamic 0–100 health scoring ($<40$ Abort / RTB, $40-70$ Caution, $\ge 70$ Nominal).
@@ -76,27 +78,30 @@ $$\text{Sensor Telemetry} \longrightarrow \text{Edge Anomaly (Stage 1)} \longrig
 - **2.9 Black-Box Replay & 2.10 Feedback Loop**:
   - Full telemetry logging with adjustable playback speeds (1x, 5x, 20x).
   - Operator validation feedback (`true_positive`, `false_positive`, `missed_fault`) to track historical model accuracy.
-- **FastAPI REST Application** ([`backend/main.py`](backend/main.py)):
-  - Exposes all 10 modules through interactive Swagger UI at `/docs`.
+- **2.11 Real-Time WebSocket Telemetry Stream** ([`backend/main.py`](backend/main.py)):
+  - Bi-directional WebSocket at `/api/ws/telemetry/{flight_id}` streaming 15-channel packets, live RPM, alerts, and accepting control actions (`pause`, `resume`, `set_speed`, `seek`, `inject_fault`).
 
-### ✅ Interactive 3D Digital Twin (`src/`)
-- **4-Cylinder Boxer Engine Spatial Model** ([`src/components/Scene3D.tsx`](src/components/Scene3D.tsx)):
-  - Built with Three.js and React Three Fiber at locked 60 FPS.
-  - Horizontally-opposed boxer layout with 4 finned cylinder barrels, cylinder heads, and exhaust runners.
-  - Live thermal CHT/EGT heatmap color grading (Nominal `#10b981` $\to$ Caution `#f59e0b` $\to$ Critical `#ef4444`).
-  - Rotating 2-blade UAV propeller coupled to engine RPM, front oil cooler radiator, and rear alternator bus.
-  - Interactive cylinder selection: clicking any cylinder isolates its telemetry.
-- **Command Center Overlay HUD** ([`src/components/OverlayHUD.tsx`](src/components/OverlayHUD.tsx)):
-  - Glassmorphic telemetry HUD displaying live 4-cylinder CHT status cards, Oil Temp/Pressure, Bus Volts, and RPM.
-  - Interactive FMEA fault injection triggers (`Nominal Clean`, `Cyl 2 Overheat`, `Oil Cooler Loss`, `Alternator Sag`).
-  - Theme palette selector supporting 5 industry color schemes.
+### ✅ ISRO & NASA Mission Control Aerospace Console (`src/`)
+- **Split Cockpit Layout** ([`src/components/Dashboard.tsx`](src/components/Dashboard.tsx)):
+  - **Left Pane (52%):** 3D Aero Engine Spatial Digital Twin running in an aerospace cleanroom test cell with studio lighting, ground bench grid, live CHT heatmaps, interactive Exploded CAD View toggle, wireframe toggle, and FMEA fault injection triggers.
+  - **Right Pane (48%):** Real-time Aerospace Telemetry Center streaming rolling 30-sample time-series graphs:
+    - **CHT 4-Cylinder Thermal Plot** (Cyl 1–4 vs 200°C caution & 230°C critical thresholds).
+    - **Oil System Dynamics** (Oil Temp °C vs Oil Press psi viscosity coupling).
+    - **EGT Thermal Plot** (4-channel combustion exhaust tracking).
+    - **Dual 28V DC Electrical Generation** (Bus 1 Primary vs Bus 2 Essential load balancing).
+    - **AI Pilot Copilot Advisory** (Stage 1 flag, Stage 2 fault label, LLM grounded situation report).
+- **Light Theme Background:** Aerospace CAD blueprint grid (`#f8fafc`) with ISRO Rocket Saffron (`#ea580c`), NASA Deep Blue (`#0284c7`), and avionics emerald accents.
+- **Bi-directional WebSocket Client** ([`src/lib/useTelemetrySocket.ts`](src/lib/useTelemetrySocket.ts)):
+  - Reconnects gracefully, drives 3D shaders and graphs from live WebSocket packets, and falls back to continuous local simulation if offline.
 
 ### ✅ Test Suite & Verification
-- `python -m pytest backend/tests -v` $\to$ **26/26 tests passing (100%)**:
+- `python -m pytest backend/tests -v` $\to$ **28/28 tests passing (100%)**:
   - 16 physics & fault simulator tests
   - 8 digital twin, alerting, risk, and copilot tests
   - 2 full-pipeline end-to-end FastAPI integration tests
-- `npm run build` $\to$ **Clean production build in 2.74s (zero TypeScript errors)**.
+  - 1 bi-directional WebSocket streaming test
+  - 1 out-of-distribution (OOD) anti-leakage generalization test
+- `npm run build` $\to$ **Clean production build in 2.25s (zero TypeScript errors)**.
 
 ---
 

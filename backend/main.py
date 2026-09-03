@@ -449,27 +449,51 @@ async def websocket_telemetry_stream(
                     fault_type = cmd.get("fault_type", "cylinder_head_overheat")
                     severity = float(cmd.get("severity", 0.8))
                     target_cyl = cmd.get("target_cylinder", 2)
-                    modified, meta = inject_fault(
-                        flight_data=flight,
-                        fault_type=fault_type,
-                        onset_time_pct=max(0.05, current_t_idx / flight.num_samples),
-                        severity=severity,
-                        target_cylinder=target_cyl,
-                    )
-                    _flights[flight_id] = modified
-                    flight = modified
-                    _faults[meta["fault_id"]] = meta
 
-                    alert = alerting_engine.evaluate_alert(
-                        flight_id=flight_id,
-                        timestamp=float(flight.timestamps[current_t_idx]),
-                        fault_type=fault_type,
-                        stage1_confidence=0.97,
-                        stage2_confidence=0.94,
-                        key_sensors=meta["affected_channels"],
+                    if fault_type in ("normal", "clean", "nominal"):
+                        clean_flight = generate_flight(profile=flight.profile, duration_s=flight.duration_s, seed=42)
+                        _flights[flight_id] = clean_flight
+                        flight = clean_flight
+                        _alerts[flight_id] = []
+                    else:
+                        modified, meta = inject_fault(
+                            flight_data=flight,
+                            fault_type=fault_type,
+                            onset_time_pct=max(0.05, current_t_idx / flight.num_samples),
+                            severity=severity,
+                            target_cylinder=target_cyl,
+                        )
+                        _flights[flight_id] = modified
+                        flight = modified
+                        _faults[meta["fault_id"]] = meta
+
+                        alert = alerting_engine.evaluate_alert(
+                            flight_id=flight_id,
+                            timestamp=float(flight.timestamps[current_t_idx]),
+                            fault_type=fault_type,
+                            stage1_confidence=0.97,
+                            stage2_confidence=0.94,
+                            key_sensors=meta["affected_channels"],
+                        )
+                        alert.report_text = copilot_service.generate_report(alert)
+                        _alerts[flight_id] = [alert]
+
+                elif action == "set_profile":
+                    new_profile = cmd.get("profile", "patrol")
+                    new_flight = generate_flight(profile=new_profile, duration_s=flight.duration_s, seed=42)
+                    _flights[flight_id] = new_flight
+                    flight = new_flight
+                    _alerts[flight_id] = []
+                    current_t_idx = 0
+
+                elif action == "trigger_federated":
+                    fleet_summary = fleet_aggregator.execute_federated_round(
+                        round_num=len(fleet_aggregator.round_history) + 1
                     )
-                    alert.report_text = copilot_service.generate_report(alert)
-                    _alerts[flight_id] = [alert]
+                    await websocket.send_json({
+                        "type": "federated_summary",
+                        "data": fleet_summary,
+                    })
             except (asyncio.TimeoutError, json.JSONDecodeError):
                 pass
 
@@ -494,6 +518,7 @@ async def websocket_telemetry_stream(
                 packet = {
                     "type": "telemetry",
                     "flight_id": flight_id,
+                    "profile": flight.profile,
                     "t": t,
                     "duration_seconds": flight.duration_s,
                     "progress_pct": round((current_t_idx / flight.num_samples) * 100, 1),

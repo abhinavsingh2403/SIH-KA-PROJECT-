@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { type LiveTelemetryPacket, type SensorChannel } from "../types/telemetry";
+import { type LiveTelemetryPacket, type FederatedSummary, type SensorChannel } from "../types/telemetry";
 
 const DEFAULT_WS_URL = "ws://localhost:8000/api/ws/telemetry/demo";
 
 export function useTelemetrySocket(url: string = DEFAULT_WS_URL) {
   const [packet, setPacket] = useState<LiveTelemetryPacket | null>(null);
+  const [federatedSummary, setFederatedSummary] = useState<FederatedSummary | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
@@ -20,9 +21,11 @@ export function useTelemetrySocket(url: string = DEFAULT_WS_URL) {
 
       ws.onmessage = (event) => {
         try {
-          const data: LiveTelemetryPacket = JSON.parse(event.data);
-          if (data.type === "telemetry") {
-            setPacket(data);
+          const msg = JSON.parse(event.data);
+          if (msg.type === "telemetry") {
+            setPacket(msg as LiveTelemetryPacket);
+          } else if (msg.type === "federated_summary") {
+            setFederatedSummary(msg.data as FederatedSummary);
           }
         } catch {
           // ignore json parse errors
@@ -88,6 +91,7 @@ export function useTelemetrySocket(url: string = DEFAULT_WS_URL) {
       setPacket({
         type: "telemetry",
         flight_id: "flight_local_sim",
+        profile: "patrol",
         t: t % 600,
         duration_seconds: 600,
         progress_pct: round((t % 600) / 6, 1),
@@ -119,17 +123,22 @@ export function useTelemetrySocket(url: string = DEFAULT_WS_URL) {
   const pause = () => sendCommand({ action: "pause" });
   const resume = () => sendCommand({ action: "resume" });
   const seek = (t: number) => sendCommand({ action: "seek", t });
+  const setProfile = (profile: string) => sendCommand({ action: "set_profile", profile });
+  const triggerFederated = () => sendCommand({ action: "trigger_federated" });
   const injectFault = (fault_type: string, target_cylinder: number = 2, severity: number = 0.8) => {
     sendCommand({ action: "inject_fault", fault_type, target_cylinder, severity });
   };
 
   return {
     packet,
+    federatedSummary,
     isConnected,
     setSpeed,
     pause,
     resume,
     seek,
+    setProfile,
+    triggerFederated,
     injectFault,
   };
 }

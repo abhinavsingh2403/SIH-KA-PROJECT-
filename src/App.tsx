@@ -19,10 +19,13 @@ export function App() {
   // Connect to live FastAPI WebSocket telemetry stream
   const {
     packet,
+    federatedSummary,
     isConnected,
     setSpeed,
     pause,
     resume,
+    setProfile,
+    triggerFederated,
     injectFault,
   } = useTelemetrySocket();
 
@@ -43,10 +46,13 @@ export function App() {
     <Dashboard
       config={sceneConfig}
       livePacket={packet}
+      federatedSummary={federatedSummary}
       isConnected={isConnected}
       onPause={pause}
       onResume={resume}
       onSetSpeed={setSpeed}
+      onSetProfile={setProfile}
+      onTriggerFederated={triggerFederated}
       onInjectFault={handleLiveInjectFault}
       onChange={handleConfigChange}
     />

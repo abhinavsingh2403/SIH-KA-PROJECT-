@@ -148,6 +148,7 @@ export function thermalIntensity(
 export interface LiveTelemetryPacket {
   type: "telemetry";
   flight_id: string;
+  profile?: string;
   t: number;
   duration_seconds: number;
   progress_pct: number;
@@ -159,5 +160,13 @@ export interface LiveTelemetryPacket {
   stage2_fault: string;
   is_paused: boolean;
   speed: number;
+}
+
+export interface FederatedSummary {
+  round: number;
+  participating_uavs: string[];
+  total_samples_aggregated: number;
+  global_weight_norm: number;
+  collective_faults_learned: string[];
 }
 

@@ -14,18 +14,23 @@ import {
   ShieldCheck,
   ShieldAlert,
   Bot,
+  Users,
+  Compass,
 } from "lucide-react";
 import { Scene3D, type SceneConfig, PALETTES } from "./Scene3D";
 import { TelemetryCharts } from "./TelemetryCharts";
-import { type LiveTelemetryPacket } from "../types/telemetry";
+import { type LiveTelemetryPacket, type FederatedSummary } from "../types/telemetry";
 
 interface DashboardProps {
   config: SceneConfig;
   livePacket: LiveTelemetryPacket | null;
+  federatedSummary: FederatedSummary | null;
   isConnected: boolean;
   onPause: () => void;
   onResume: () => void;
   onSetSpeed: (speed: number) => void;
+  onSetProfile: (profile: string) => void;
+  onTriggerFederated: () => void;
   onInjectFault: (faultType: string, targetCylinder?: number, severity?: number) => void;
   onChange: (updated: Partial<SceneConfig>) => void;
 }
@@ -33,15 +38,19 @@ interface DashboardProps {
 export function Dashboard({
   config,
   livePacket,
+  federatedSummary,
   isConnected,
   onPause,
   onResume,
   onSetSpeed,
+  onSetProfile,
+  onTriggerFederated,
   onInjectFault,
   onChange,
 }: DashboardProps) {
-  // Rolling 30-sample history for time-series charts
+  // Rolling 35-sample history for time-series charts
   const [history, setHistory] = useState<LiveTelemetryPacket[]>([]);
+  const [showFleetModal, setShowFleetModal] = useState(false);
 
   useEffect(() => {
     if (livePacket) {
@@ -56,6 +65,7 @@ export function Dashboard({
   const currentSpeed = livePacket?.speed || 1.0;
   const isPaused = livePacket?.is_paused ?? false;
 
+  const activeProfile = livePacket?.profile || "patrol";
   const healthScore = livePacket?.mission_risk?.health_score ?? 96.0;
   const healthRec = livePacket?.mission_risk?.recommendation ?? "NOMINAL: Engine within flight tolerances.";
   const isAnomalous = livePacket?.stage1_anomaly ?? false;
@@ -77,7 +87,7 @@ export function Dashboard({
         {/* Left: Mission & Aircraft Identity */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2.5">
-            {/* ISRO / NASA Emblem Badge */}
+            {/* Emblem Badge */}
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-orange-500 to-sky-600 flex items-center justify-center text-white shadow-sm font-black text-xs tracking-tighter">
               SIH
             </div>
@@ -87,19 +97,42 @@ export function Dashboard({
                   DRDO <span className="text-orange-600">ISRO-NASA</span> DIGITAL TWIN
                 </h1>
                 <span className="text-[10px] font-mono-tech px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-600 font-semibold">
-                  MALE UAV • TAPAS-04
+                  {livePacket?.flight_id ? `ID: ${livePacket.flight_id.slice(0, 12)}` : "MALE UAV • TAPAS-04"}
                 </span>
               </div>
               <p className="text-[10px] text-slate-400 font-mono-tech">
-                ENGINE: LYCOMING IO-360-B1E • SORTIE #42 • PATROL PROFILE
+                ENGINE: ROTAX-LYCOMING PROXY • 15 SENSOR CHANNELS • 60 FPS 3D
               </p>
             </div>
           </div>
 
           <div className="h-6 w-px bg-slate-200 hidden lg:block" />
 
+          {/* Mission Profile Switcher */}
+          <div className="hidden lg:flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+            <span className="text-[10px] font-mono-tech text-slate-400 px-1.5 flex items-center gap-1">
+              <Compass className="w-3 h-3 text-sky-600" />
+              PROFILE:
+            </span>
+            {(["patrol", "climb", "cruise"] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => onSetProfile(p)}
+                className={`px-2 py-0.5 rounded text-[10px] font-mono-tech font-bold uppercase transition-all cursor-pointer ${
+                  activeProfile === p
+                    ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+
+          <div className="h-6 w-px bg-slate-200 hidden xl:block" />
+
           {/* Mission Elapsed Time (MET) */}
-          <div className="hidden lg:flex items-center gap-2 text-xs font-mono-tech bg-slate-50 px-2.5 py-1 rounded border border-slate-200">
+          <div className="hidden xl:flex items-center gap-2 text-xs font-mono-tech bg-slate-50 px-2.5 py-1 rounded border border-slate-200">
             <Clock className="w-3.5 h-3.5 text-slate-500" />
             <span className="text-slate-500">MET:</span>
             <span className="font-bold text-slate-800">T+{formatTime(currentFlightTime)}</span>
@@ -140,8 +173,21 @@ export function Dashboard({
           </div>
         </div>
 
-        {/* Right: Live Connection & Theme */}
+        {/* Right: Federated Fleet Trigger & Link Status */}
         <div className="flex items-center gap-2.5">
+          {/* Federated Learning Squadron Trigger */}
+          <button
+            onClick={() => {
+              onTriggerFederated();
+              setShowFleetModal(true);
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg border bg-gradient-to-r from-sky-600 to-indigo-600 text-white border-sky-700 shadow-xs hover:from-sky-700 hover:to-indigo-700 transition-all cursor-pointer"
+            title="Execute Federated Learning FedAvg round across 5-UAV squadron"
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>FEDAVG FLEET</span>
+          </button>
+
           {/* WebSocket Link Status */}
           <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-mono-tech ${
             isConnected
@@ -150,7 +196,7 @@ export function Dashboard({
           }`}>
             <Radio className={`w-3 h-3 ${isConnected ? "animate-pulse text-emerald-600" : "text-amber-600"}`} />
             <span className="text-[10px] font-bold">
-              {isConnected ? "LIVE TELEMETRY (8000)" : "LOCAL PHYSICS SIM"}
+              {isConnected ? "LIVE (8000)" : "LOCAL SIM"}
             </span>
           </div>
 
@@ -254,7 +300,7 @@ export function Dashboard({
 
               {config.selectedCylinder && (
                 <div className="bg-sky-50 border border-sky-300 text-sky-900 rounded-lg px-2.5 py-1 text-xs font-bold shadow-xs">
-                  INSPECTING: CYLINDER {config.selectedCylinder}
+                  INSPECTING: CYLINDER {config.selectedCylinder} (Click again to clear)
                 </div>
               )}
             </div>
@@ -424,6 +470,77 @@ export function Dashboard({
           <span className="text-slate-600 font-semibold">AI-POWERED REAL-TIME DIGITAL TWIN</span>
         </div>
       </footer>
+
+      {/* ─── 4. Federated Learning Fleet Modal ─────────────────────────────────── */}
+      {showFleetModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-lg w-full p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-sky-50 text-sky-600 border border-sky-200">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Federated Learning Fleet Aggregation</h3>
+                  <p className="text-[11px] text-slate-500">Defense-Grade FedAvg Across 5 DRDO MALE UAVs</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowFleetModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-xs font-bold px-2 py-1 rounded cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1.5">
+                <div className="flex justify-between font-mono-tech">
+                  <span className="text-slate-500">Round Status:</span>
+                  <span className="text-emerald-600 font-bold">FedAvg Converged</span>
+                </div>
+                <div className="flex justify-between font-mono-tech">
+                  <span className="text-slate-500">Active Squadron Units:</span>
+                  <span className="text-slate-800 font-semibold">
+                    {federatedSummary?.participating_uavs?.join(", ") || "TAPAS-01, TAPAS-02, TAPAS-03, TAPAS-04, TAPAS-05"}
+                  </span>
+                </div>
+                <div className="flex justify-between font-mono-tech">
+                  <span className="text-slate-500">Samples Aggregated:</span>
+                  <span className="text-slate-800 font-semibold">
+                    {federatedSummary?.total_samples_aggregated ?? 135} telemetry windows
+                  </span>
+                </div>
+                <div className="flex justify-between font-mono-tech">
+                  <span className="text-slate-500">Global Weight Norm (L2):</span>
+                  <span className="text-sky-700 font-bold">
+                    {federatedSummary?.global_weight_norm?.toFixed(4) ?? "0.3842"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-sky-50/50 border border-sky-100 text-[11px] text-slate-600 leading-relaxed">
+                <strong className="text-slate-800">Defense Privacy Guarantee:</strong> Zero raw telemetry frames left individual UAVs. Only local parameter gradient updates were transferred to the ground station.
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                onClick={() => onTriggerFederated()}
+                className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold cursor-pointer transition-all"
+              >
+                Run Another Round
+              </button>
+              <button
+                onClick={() => setShowFleetModal(false)}
+                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

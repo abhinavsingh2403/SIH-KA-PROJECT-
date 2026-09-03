@@ -62,6 +62,18 @@ def inject_fault(
 
     ramp = _sigmoid_ramp(data.timestamps, onset_s, remaining_s, severity)
 
+    if fault_type in ("normal", "clean", "nominal"):
+        return data, {
+            "fault_id": f"clean_{uuid.uuid4().hex[:10]}",
+            "flight_id": data.flight_id,
+            "fault_type": "normal",
+            "onset_time_pct": 0.0,
+            "onset_time_s": 0.0,
+            "severity": 0.0,
+            "affected_channels": [],
+            "target_cylinder": None,
+        }
+
     fault_id = f"fault_{uuid.uuid4().hex[:10]}"
     affected_channels: list[str] = []
 

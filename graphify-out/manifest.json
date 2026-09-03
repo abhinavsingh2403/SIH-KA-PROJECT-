@@ -1,0 +1,230 @@
+{
+  ".oxlintrc.json": {
+    "mtime": 1788441786.112553,
+    "seen": 1788442184.3109078,
+    "ast_hash": "029f4905006c1fffd96bc863e2d98d3e",
+    "semantic_hash": "029f4905006c1fffd96bc863e2d98d3e"
+  },
+  "package.json": {
+    "mtime": 1788441915.892957,
+    "seen": 1788442184.3109188,
+    "ast_hash": "5e60e462d34545ef9000f729c28273eb",
+    "semantic_hash": "5e60e462d34545ef9000f729c28273eb"
+  },
+  "src/App.tsx": {
+    "mtime": 1788444331.293236,
+    "seen": 1788444768.9946094,
+    "ast_hash": "565e7e8c94dc5aaff68baa249098fc82",
+    "semantic_hash": "565e7e8c94dc5aaff68baa249098fc82"
+  },
+  "src/components/OverlayHUD.tsx": {
+    "mtime": 1788444313.9096694,
+    "seen": 1788444768.994615,
+    "ast_hash": "47bffd753dfcc65d770aceec8e14af54",
+    "semantic_hash": "47bffd753dfcc65d770aceec8e14af54"
+  },
+  "src/components/Scene3D.tsx": {
+    "mtime": 1788444286.2863028,
+    "seen": 1788444768.99462,
+    "ast_hash": "cea5318011cfcdb14f3379ffd54f11a2",
+    "semantic_hash": "cea5318011cfcdb14f3379ffd54f11a2"
+  },
+  "src/lib/motion.ts": {
+    "mtime": 1788441962.0370097,
+    "seen": 1788442184.3109393,
+    "ast_hash": "62b7597356e2495d9fabd91bf56b62fa",
+    "semantic_hash": "62b7597356e2495d9fabd91bf56b62fa"
+  },
+  "src/lib/utils.ts": {
+    "mtime": 1788441958.5363245,
+    "seen": 1788442184.3109486,
+    "ast_hash": "618d00bf4537ce84f9ba62c5b215fb30",
+    "semantic_hash": "618d00bf4537ce84f9ba62c5b215fb30"
+  },
+  "src/main.tsx": {
+    "mtime": 1788441786.3981252,
+    "seen": 1788442184.3109534,
+    "ast_hash": "787e5a07efeb2bf6209d5937195f2f68",
+    "semantic_hash": "787e5a07efeb2bf6209d5937195f2f68"
+  },
+  "tsconfig.app.json": {
+    "mtime": 1788441786.1456628,
+    "seen": 1788442184.3109586,
+    "ast_hash": "5f2dafd737dea8a4ddcbb10f5113ac5a",
+    "semantic_hash": "5f2dafd737dea8a4ddcbb10f5113ac5a"
+  },
+  "tsconfig.json": {
+    "mtime": 1788441786.1534648,
+    "seen": 1788442184.3109686,
+    "ast_hash": "a3d39fa780ebff65444de257f291ce6c",
+    "semantic_hash": "a3d39fa780ebff65444de257f291ce6c"
+  },
+  "tsconfig.node.json": {
+    "mtime": 1788441786.1617582,
+    "seen": 1788442184.3109727,
+    "ast_hash": "f9cb81ddcea69ffdab672fc8c48dca66",
+    "semantic_hash": "f9cb81ddcea69ffdab672fc8c48dca66"
+  },
+  "vite.config.ts": {
+    "mtime": 1788441923.5566912,
+    "seen": 1788442184.3109767,
+    "ast_hash": "844f5af05f82be907aaa0ee656d7ae33",
+    "semantic_hash": "844f5af05f82be907aaa0ee656d7ae33"
+  },
+  "backend/__init__.py": {
+    "mtime": 1788442758.6302905,
+    "seen": 1788444768.9940293,
+    "ast_hash": "25743f64da454e9dae2bb22c6954dd34",
+    "semantic_hash": "25743f64da454e9dae2bb22c6954dd34"
+  },
+  "backend/config.py": {
+    "mtime": 1788442620.246945,
+    "seen": 1788444768.9940367,
+    "ast_hash": "2fd23fbbb0ec0ead86253e70b128079e",
+    "semantic_hash": "2fd23fbbb0ec0ead86253e70b128079e"
+  },
+  "backend/main.py": {
+    "mtime": 1788444147.7173655,
+    "seen": 1788444768.9940424,
+    "ast_hash": "4f3dec0b408b30cff8d32b528a80edc6",
+    "semantic_hash": "4f3dec0b408b30cff8d32b528a80edc6"
+  },
+  "backend/models/__init__.py": {
+    "mtime": 1788443869.2026584,
+    "seen": 1788444768.9940474,
+    "ast_hash": "3ed8441fe2d24306aad5cc3d4285f807",
+    "semantic_hash": "3ed8441fe2d24306aad5cc3d4285f807"
+  },
+  "backend/models/features.py": {
+    "mtime": 1788443863.5545468,
+    "seen": 1788444768.994053,
+    "ast_hash": "d0d76138919517f1e6e9a9a621f6d41b",
+    "semantic_hash": "d0d76138919517f1e6e9a9a621f6d41b"
+  },
+  "backend/models/stage1_detector.py": {
+    "mtime": 1788443945.7695272,
+    "seen": 1788444768.9940588,
+    "ast_hash": "d37d002557709d5d74ffadbca0d78b40",
+    "semantic_hash": "d37d002557709d5d74ffadbca0d78b40"
+  },
+  "backend/models/stage2_classifier.py": {
+    "mtime": 1788443973.5833175,
+    "seen": 1788444768.9940639,
+    "ast_hash": "99134f6ba110fb20526ad46326f95e84",
+    "semantic_hash": "99134f6ba110fb20526ad46326f95e84"
+  },
+  "backend/schemas.py": {
+    "mtime": 1788442648.00876,
+    "seen": 1788444768.9940693,
+    "ast_hash": "e32a90a8124335cdd98df2fddf2f5128",
+    "semantic_hash": "e32a90a8124335cdd98df2fddf2f5128"
+  },
+  "backend/scripts/generate_dataset.py": {
+    "mtime": 1788444533.9559076,
+    "seen": 1788444768.994074,
+    "ast_hash": "9439aa9c5042d913b8a5e91e807d4a21",
+    "semantic_hash": "9439aa9c5042d913b8a5e91e807d4a21"
+  },
+  "backend/scripts/train_pipeline.py": {
+    "mtime": 1788444560.6424623,
+    "seen": 1788444768.9940796,
+    "ast_hash": "54f43e9b77f5e6f8ca89903f08140d32",
+    "semantic_hash": "54f43e9b77f5e6f8ca89903f08140d32"
+  },
+  "backend/services/__init__.py": {
+    "mtime": 1788444084.736805,
+    "seen": 1788444768.9940872,
+    "ast_hash": "80737b8ede07a36c59973984e65d0c8f",
+    "semantic_hash": "80737b8ede07a36c59973984e65d0c8f"
+  },
+  "backend/services/alerting.py": {
+    "mtime": 1788444090.62639,
+    "seen": 1788444768.9940922,
+    "ast_hash": "c8c631eb21c257281e8e80c8ec83aca9",
+    "semantic_hash": "c8c631eb21c257281e8e80c8ec83aca9"
+  },
+  "backend/services/llm_copilot.py": {
+    "mtime": 1788444112.5407352,
+    "seen": 1788444768.994098,
+    "ast_hash": "e430d54a4b5a5c90b8c94d21d74f1a9b",
+    "semantic_hash": "e430d54a4b5a5c90b8c94d21d74f1a9b"
+  },
+  "backend/services/mission_risk.py": {
+    "mtime": 1788444101.173386,
+    "seen": 1788444768.994103,
+    "ast_hash": "6a558217a83ab8a3e28c81097aa956ef",
+    "semantic_hash": "6a558217a83ab8a3e28c81097aa956ef"
+  },
+  "backend/simulator/__init__.py": {
+    "mtime": 1788442653.4494977,
+    "seen": 1788444768.9941084,
+    "ast_hash": "71dd24a94d31b34c0bf75f2585c351d6",
+    "semantic_hash": "71dd24a94d31b34c0bf75f2585c351d6"
+  },
+  "backend/simulator/engine_simulator.py": {
+    "mtime": 1788444678.97088,
+    "seen": 1788444768.9941134,
+    "ast_hash": "32d0c592b3669f8a25b761b06fc5d40e",
+    "semantic_hash": "32d0c592b3669f8a25b761b06fc5d40e"
+  },
+  "backend/simulator/fault_injector.py": {
+    "mtime": 1788442729.6054192,
+    "seen": 1788444768.9941187,
+    "ast_hash": "589401dd93ea451f74ebb32167f864ab",
+    "semantic_hash": "589401dd93ea451f74ebb32167f864ab"
+  },
+  "backend/tests/__init__.py": {
+    "mtime": 1788442806.3789814,
+    "seen": 1788444768.9941237,
+    "ast_hash": "682e78239516d42cf139c8ca357e3cc2",
+    "semantic_hash": "682e78239516d42cf139c8ca357e3cc2"
+  },
+  "backend/tests/test_api_endpoints.py": {
+    "mtime": 1788444618.3653686,
+    "seen": 1788444768.994129,
+    "ast_hash": "ff1ff661380cb737b6454db71d5c1e47",
+    "semantic_hash": "ff1ff661380cb737b6454db71d5c1e47"
+  },
+  "backend/tests/test_simulator.py": {
+    "mtime": 1788442908.7745862,
+    "seen": 1788444768.9941335,
+    "ast_hash": "2159f966360fe06c7b2050bff89f90cc",
+    "semantic_hash": "2159f966360fe06c7b2050bff89f90cc"
+  },
+  "backend/tests/test_twin_and_services.py": {
+    "mtime": 1788444160.590451,
+    "seen": 1788444768.9941387,
+    "ast_hash": "e8a57e15c7771b50b4bc6c2afc4b0bac",
+    "semantic_hash": "e8a57e15c7771b50b4bc6c2afc4b0bac"
+  },
+  "backend/twin/__init__.py": {
+    "mtime": 1788444018.941397,
+    "seen": 1788444768.994144,
+    "ast_hash": "06cde572d43391d05817229bdd934a4f",
+    "semantic_hash": "06cde572d43391d05817229bdd934a4f"
+  },
+  "backend/twin/residual_engine.py": {
+    "mtime": 1788444193.3285,
+    "seen": 1788444768.9941492,
+    "ast_hash": "4c44982cd390e49e5bc5e2b9c29242fd",
+    "semantic_hash": "4c44982cd390e49e5bc5e2b9c29242fd"
+  },
+  "data/models/stage1/config.json": {
+    "mtime": 1788444578.326002,
+    "seen": 1788444768.994154,
+    "ast_hash": "6f4b58014cd361b30f30624836d2d1bb",
+    "semantic_hash": "6f4b58014cd361b30f30624836d2d1bb"
+  },
+  "data/models/stage2/config.json": {
+    "mtime": 1788444583.3766208,
+    "seen": 1788444768.9941597,
+    "ast_hash": "3c87d83fe4f85b03d66ce597b86e7bcc",
+    "semantic_hash": "3c87d83fe4f85b03d66ce597b86e7bcc"
+  },
+  "src/types/telemetry.ts": {
+    "mtime": 1788442942.2646823,
+    "seen": 1788444768.995869,
+    "ast_hash": "7d4338db19bded1cd1bee60746dd93bb",
+    "semantic_hash": "7d4338db19bded1cd1bee60746dd93bb"
+  }
+}

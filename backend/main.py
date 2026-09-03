@@ -488,7 +488,7 @@ async def websocket_telemetry_stream(
                     _flights[flight_id] = new_flight
                     flight = new_flight
                     _alerts[flight_id] = []
-                    current_t_idx = 0
+                    current_t_idx = max(60, min(current_t_idx, flight.num_samples - 1))
 
                 elif action == "trigger_federated":
                     fleet_summary = fleet_aggregator.execute_federated_round(

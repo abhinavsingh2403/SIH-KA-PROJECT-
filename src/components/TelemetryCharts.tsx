@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { type LiveTelemetryPacket, type SensorChannel } from "../types/telemetry";
 import { Flame, Zap, Activity, Droplets, type LucideIcon } from "lucide-react";
 
@@ -48,6 +48,9 @@ function MultiLineChart({
   const plotW = width - padding.left - padding.right;
   const plotH = height - padding.top - padding.bottom;
 
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
   // Use a fixed buffer length of 35 points to eliminate stretching and shaking
   const paths = useMemo(() => {
     if (history.length < 2) return [];
@@ -66,22 +69,52 @@ function MultiLineChart({
       }
 
       const lastVal = history[history.length - 1]?.channels?.[s.key] ?? minVal;
+      const hoveredVal = hoverIndex !== null && history[hoverIndex]
+        ? history[hoverIndex]?.channels?.[s.key] ?? lastVal
+        : lastVal;
+
+      const firstPt = pts[0];
+      const lastPt = pts[pts.length - 1];
+      const bottomY = (padding.top + plotH).toFixed(1);
+      const areaPath = `M ${pts.join(" L ")} L ${lastPt.split(",")[0]},${bottomY} L ${firstPt.split(",")[0]},${bottomY} Z`;
 
       return {
         key: s.key,
         name: s.name,
         color: s.color,
         d: `M ${pts.join(" L ")}`,
-        currentVal: lastVal,
+        areaD: areaPath,
+        currentVal: hoveredVal,
       };
     });
-  }, [history, series, minVal, maxVal, plotW, plotH, padding.left, padding.top]);
+  }, [history, series, minVal, maxVal, plotW, plotH, padding.left, padding.top, hoverIndex]);
 
   const cautionY = cautionThresh
     ? padding.top + plotH - ((cautionThresh - minVal) / (maxVal - minVal)) * plotH
     : null;
   const criticalY = criticalThresh
     ? padding.top + plotH - ((criticalThresh - minVal) / (maxVal - minVal)) * plotH
+    : null;
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current || history.length < 2) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const clientX = e.clientX - rect.left;
+    const scale = width / rect.width;
+    const svgX = clientX * scale;
+
+    const normX = (svgX - padding.left) / plotW;
+    const clampedNorm = Math.max(0, Math.min(1, normX));
+    const idx = Math.round(clampedNorm * (history.length - 1));
+    setHoverIndex(idx);
+  };
+
+  const handleMouseLeave = () => {
+    setHoverIndex(null);
+  };
+
+  const crosshairX = hoverIndex !== null && history.length > 1
+    ? padding.left + (hoverIndex / (history.length - 1)) * plotW
     : null;
 
   return (
@@ -108,7 +141,7 @@ function MultiLineChart({
                 onClick={() => onBadgeClick?.(p.key)}
                 className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
                   isHighlighted
-                    ? "bg-sky-100 border-sky-400 font-bold text-sky-900"
+                    ? "bg-sky-100 border-sky-400 font-bold text-sky-900 shadow-xs"
                     : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
@@ -124,12 +157,26 @@ function MultiLineChart({
       </div>
 
       {/* SVG Chart Canvas with FIXED height to prevent vertical jitter */}
-      <div className="relative w-full h-[105px] overflow-hidden bg-slate-50/50 rounded border border-slate-100">
+      <div
+        ref={containerRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        className="relative w-full h-[105px] overflow-hidden bg-slate-50/50 rounded border border-slate-100 cursor-crosshair"
+      >
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="w-full h-full block"
           preserveAspectRatio="none"
         >
+          <defs>
+            {paths.map((p) => (
+              <linearGradient key={`grad-${p.key}`} id={`grad-${p.key}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={p.color} stopOpacity="0.22" />
+                <stop offset="100%" stopColor={p.color} stopOpacity="0.0" />
+              </linearGradient>
+            ))}
+          </defs>
+
           {/* Subtle Horizontal Gridlines */}
           {[0, 0.33, 0.66, 1.0].map((frac, i) => {
             const y = padding.top + plotH * (1 - frac);
@@ -183,7 +230,20 @@ function MultiLineChart({
             />
           )}
 
-          {/* Data Series Paths */}
+          {/* Area Fills under curves */}
+          {paths.map((p) => {
+            const isHighlighted = highlightKey ? p.key.includes(highlightKey) : false;
+            return (
+              <path
+                key={`area-${p.key}`}
+                d={p.areaD}
+                fill={`url(#grad-${p.key})`}
+                opacity={highlightKey && !isHighlighted ? 0.05 : 1.0}
+              />
+            );
+          })}
+
+          {/* Data Series Line Paths */}
           {paths.map((p) => {
             const isHighlighted = highlightKey ? p.key.includes(highlightKey) : false;
             return (
@@ -195,10 +255,25 @@ function MultiLineChart({
                 strokeWidth={isHighlighted ? 2.5 : 1.6}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                opacity={highlightKey && !isHighlighted ? 0.3 : 1.0}
+                opacity={highlightKey && !isHighlighted ? 0.25 : 1.0}
               />
             );
           })}
+
+          {/* Interactive Hover Crosshair */}
+          {crosshairX !== null && (
+            <g>
+              <line
+                x1={crosshairX}
+                y1={padding.top}
+                x2={crosshairX}
+                y2={padding.top + plotH}
+                stroke="#0284c7"
+                strokeWidth={1.2}
+                strokeDasharray="2 2"
+              />
+            </g>
+          )}
 
           {/* X-axis baseline */}
           <line

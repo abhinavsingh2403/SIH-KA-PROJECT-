@@ -31,6 +31,9 @@ interface DashboardProps {
   livePacket: LiveTelemetryPacket | null;
   federatedSummary: FederatedSummary | null;
   isConnected: boolean;
+  selectedSpeed?: number;
+  selectedFault?: string;
+  selectedProfile?: string;
   onPause: () => void;
   onResume: () => void;
   onSetSpeed: (speed: number) => void;
@@ -85,6 +88,9 @@ export function Dashboard({
   livePacket,
   federatedSummary,
   isConnected,
+  selectedSpeed,
+  selectedFault,
+  selectedProfile,
   onPause,
   onResume,
   onSetSpeed,
@@ -126,14 +132,14 @@ export function Dashboard({
   }, [livePacket]);
 
   const currentRPM = livePacket?.rpm || config.rpm;
-  const currentSpeed = livePacket?.speed || 1.0;
+  const currentSpeed = selectedSpeed ?? livePacket?.speed ?? 1.0;
   const isPaused = livePacket?.is_paused ?? false;
 
-  const activeProfile = livePacket?.profile || "patrol";
+  const activeProfile = selectedProfile ?? livePacket?.profile ?? "patrol";
   const healthScore = livePacket?.mission_risk?.health_score ?? 96.0;
   const healthRec = livePacket?.mission_risk?.recommendation ?? "NOMINAL: Engine within flight tolerances.";
-  const isAnomalous = livePacket?.stage1_anomaly ?? false;
-  const diagnosedFault = livePacket?.stage2_fault ?? "normal";
+  const isAnomalous = selectedFault && selectedFault !== "normal" ? true : (livePacket?.stage1_anomaly ?? false);
+  const diagnosedFault = selectedFault ?? livePacket?.stage2_fault ?? "normal";
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);

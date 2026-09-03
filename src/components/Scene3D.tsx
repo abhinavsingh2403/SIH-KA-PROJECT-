@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, ContactShadows } from "@react-three/drei";
+import { OrbitControls, ContactShadows, Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { type LiveTelemetryPacket } from "../types/telemetry";
 
@@ -66,17 +66,28 @@ function PistonCylinder({
 }: CylinderProps) {
   const [hovered, setHovered] = useState(false);
 
-  const thermalColor = useMemo(() => {
-    if (tempC > 230) return "#ef4444";
-    if (tempC > 190) return "#f59e0b";
-    return "#10b981";
-  }, [tempC]);
+  // Realistic thermal physics: Normal is clean machined alloy (#64748b).
+  // Thermal glow ONLY activates during actual high-temperature overheating (> 195°C).
+  const isOverheating = tempC > 195;
+  const isCritical = tempC > 225;
+
+  const headColor = useMemo(() => {
+    if (isCritical) return "#dc2626";     // Red thermal runaway
+    if (isOverheating) return "#ea580c";  // Orange high thermal stress
+    return "#64748b";                     // Sleek aeronautical alloy
+  }, [isOverheating, isCritical]);
+
+  const emissiveGlow = useMemo(() => {
+    if (isCritical) return "#ef4444";
+    if (isOverheating) return "#f97316";
+    return "#000000";
+  }, [isOverheating, isCritical]);
 
   const emissiveIntensity = useMemo(() => {
-    if (tempC > 230) return 0.95;
-    if (tempC > 190) return 0.55;
-    return 0.15;
-  }, [tempC]);
+    if (isCritical) return 0.85;
+    if (isOverheating) return 0.45;
+    return 0.0;
+  }, [isOverheating, isCritical]);
 
   return (
     <group
@@ -97,63 +108,71 @@ function PistonCylinder({
         document.body.style.cursor = "auto";
       }}
     >
-      {/* Cylinder Barrel with Cooling Fins */}
+      {/* Cylinder Barrel Body (Machined High-Strength Steel Alloy) */}
       <mesh position={[0, 0.7, 0]}>
         <cylinderGeometry args={[0.55, 0.55, 1.2, 32]} />
         <meshStandardMaterial
-          color={isSelected ? "#38bdf8" : hovered ? "#475569" : "#334155"}
-          roughness={0.35}
-          metalness={0.85}
+          color={hovered ? "#475569" : "#334155"}
+          roughness={0.4}
+          metalness={0.7}
           wireframe={wireframe}
         />
       </mesh>
 
-      {/* 5 Precision Cooling Fin Discs */}
+      {/* 5 CNC Cooling Fin Discs (Polished Edges) */}
       {[0.3, 0.5, 0.7, 0.9, 1.1].map((y, idx) => (
         <mesh key={idx} position={[0, y, 0]}>
           <cylinderGeometry args={[0.7, 0.7, 0.04, 32]} />
           <meshStandardMaterial
-            color={isSelected ? "#7dd3fc" : "#475569"}
-            metalness={0.9}
+            color="#94a3b8"
+            metalness={0.85}
             roughness={0.25}
             wireframe={wireframe}
           />
         </mesh>
       ))}
 
-      {/* Cylinder Head (High-Temperature Ceramic Hotspot) */}
+      {/* Cylinder Head Chamber (Authentic Aeronautical Alloy with Thermal Glow) */}
       <mesh position={[0, 1.45, 0]}>
         <cylinderGeometry args={[0.62, 0.58, 0.4, 32]} />
         <meshStandardMaterial
-          color={isSelected ? "#38bdf8" : thermalColor}
-          emissive={thermalColor}
+          color={headColor}
+          emissive={emissiveGlow}
           emissiveIntensity={emissiveIntensity}
-          roughness={0.25}
-          metalness={0.75}
+          roughness={0.3}
+          metalness={0.7}
           wireframe={wireframe}
         />
       </mesh>
 
-      {/* Spark Plug & Rocker Cover */}
+      {/* Rocker Box & Valve Cover (Billet Aluminum) */}
       <mesh position={[0, 1.7, 0]}>
         <boxGeometry args={[0.5, 0.2, 0.5]} />
         <meshStandardMaterial
-          color={isSelected ? "#38bdf8" : "#64748b"}
-          metalness={0.8}
-          roughness={0.3}
+          color="#cbd5e1"
+          metalness={0.85}
+          roughness={0.2}
           wireframe={wireframe}
         />
       </mesh>
+
+      {/* Selection Holographic Halo Ring */}
+      {isSelected && (
+        <mesh position={[0, 1.45, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.75, 0.03, 16, 32]} />
+          <meshBasicMaterial color="#0284c7" />
+        </mesh>
+      )}
 
       {/* Exhaust Runner Pipe */}
       <mesh position={[0.4, 0.8, -0.2]} rotation={[0.4, 0.2, 0.8]}>
         <cylinderGeometry args={[0.12, 0.12, 0.8, 16]} />
         <meshStandardMaterial
-          color={tempC > 200 ? "#f97316" : "#475569"}
-          emissive={tempC > 200 ? "#f97316" : "#000000"}
-          emissiveIntensity={tempC > 200 ? 0.6 : 0.0}
+          color={isOverheating ? "#ea580c" : "#64748b"}
+          emissive={isOverheating ? "#ea580c" : "#000000"}
+          emissiveIntensity={isOverheating ? 0.6 : 0.0}
           roughness={0.4}
-          metalness={0.85}
+          metalness={0.8}
           wireframe={wireframe}
         />
       </mesh>
@@ -189,7 +208,7 @@ function AeroPistonEngine({
   const rpm = livePacket?.rpm || config.rpm || 2400;
 
   useFrame((_, delta) => {
-    // Spin propeller at scaled operational speed
+    // Spin propeller smoothly at scaled operational speed
     if (propRef.current) {
       const radPerSec = (rpm / 60) * Math.PI * 2 * 0.15;
       propRef.current.rotation.z += radPerSec * delta;
@@ -227,12 +246,23 @@ function AeroPistonEngine({
 
   return (
     <group ref={engineRef} position={[0, 0, 0]}>
-      {/* Central Engine Crankcase Block (Aircraft Cast Aluminum) */}
+      {/* Central Engine Crankcase Block (Aircraft Cast Aluminum - Clean Metal) */}
       <mesh position={[0, 0, 0]}>
         <boxGeometry args={[1.5, 1.2, 2.4]} />
         <meshStandardMaterial
-          color="#334155"
-          metalness={0.9}
+          color="#64748b"
+          metalness={0.7}
+          roughness={0.35}
+          wireframe={config.wireframe}
+        />
+      </mesh>
+
+      {/* Crankcase Top Stiffening Ribs */}
+      <mesh position={[0, 0.62, 0]}>
+        <boxGeometry args={[1.3, 0.08, 2.2]} />
+        <meshStandardMaterial
+          color="#475569"
+          metalness={0.8}
           roughness={0.3}
           wireframe={config.wireframe}
         />
@@ -242,9 +272,9 @@ function AeroPistonEngine({
       <mesh position={[0, -0.75, 0]}>
         <boxGeometry args={[1.2, 0.4, 2.0]} />
         <meshStandardMaterial
-          color="#1e293b"
-          metalness={0.92}
-          roughness={0.25}
+          color="#334155"
+          metalness={0.75}
+          roughness={0.3}
           wireframe={config.wireframe}
         />
       </mesh>
@@ -299,23 +329,29 @@ function AeroPistonEngine({
 
       {/* Propeller Drive Assembly */}
       <group ref={propGroupRef} position={[0, 0, 1.8]}>
-        {/* Propeller Hub & Spinner */}
+        {/* Polished Propeller Spinner Dome */}
         <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <coneGeometry args={[0.4, 0.7, 32]} />
           <meshStandardMaterial
-            color="#f8fafc"
+            color="#e2e8f0"
             metalness={0.9}
             roughness={0.15}
             wireframe={config.wireframe}
           />
         </mesh>
 
-        {/* Rotating Propeller Blades */}
-        <group ref={propRef} position={[0, 0, -0.1]}>
+        {/* Propeller Shaft Collar */}
+        <mesh position={[0, 0, -0.2]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.3, 0.3, 0.25, 24]} />
+          <meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.2} />
+        </mesh>
+
+        {/* Rotating Composite Propeller Blades */}
+        <group ref={propRef} position={[0, 0, -0.05]}>
           {/* Blade 1 */}
           <mesh position={[0, 1.4, 0]} rotation={[0, 0.2, 0]}>
             <boxGeometry args={[0.22, 2.4, 0.05]} />
-            <meshStandardMaterial color="#0f172a" roughness={0.3} metalness={0.7} />
+            <meshStandardMaterial color="#0f172a" roughness={0.3} metalness={0.5} />
           </mesh>
           {/* Blade 1 High-Vis Safety Tip */}
           <mesh position={[0, 2.45, 0]}>
@@ -326,7 +362,7 @@ function AeroPistonEngine({
           {/* Blade 2 */}
           <mesh position={[0, -1.4, 0]} rotation={[0, -0.2, 0]}>
             <boxGeometry args={[0.22, 2.4, 0.05]} />
-            <meshStandardMaterial color="#0f172a" roughness={0.3} metalness={0.7} />
+            <meshStandardMaterial color="#0f172a" roughness={0.3} metalness={0.5} />
           </mesh>
           {/* Blade 2 High-Vis Safety Tip */}
           <mesh position={[0, -2.45, 0]}>
@@ -341,11 +377,11 @@ function AeroPistonEngine({
         <mesh>
           <boxGeometry args={[1.0, 0.3, 0.7]} />
           <meshStandardMaterial
-            color={isOilFault ? "#dc2626" : "#64748b"}
+            color={isOilFault ? "#dc2626" : "#475569"}
             emissive={isOilFault ? "#dc2626" : "#000000"}
-            emissiveIntensity={isOilFault ? 0.8 : 0.0}
+            emissiveIntensity={isOilFault ? 0.85 : 0.0}
             metalness={0.8}
-            roughness={0.4}
+            roughness={0.3}
             wireframe={config.wireframe}
           />
         </mesh>
@@ -356,11 +392,11 @@ function AeroPistonEngine({
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.3, 0.3, 0.5, 24]} />
           <meshStandardMaterial
-            color={isAltFault ? "#d97706" : "#475569"}
+            color={isAltFault ? "#d97706" : "#64748b"}
             emissive={isAltFault ? "#d97706" : "#000000"}
-            emissiveIntensity={isAltFault ? 0.7 : 0.0}
+            emissiveIntensity={isAltFault ? 0.75 : 0.0}
             metalness={0.85}
-            roughness={0.3}
+            roughness={0.25}
             wireframe={config.wireframe}
           />
         </mesh>
@@ -393,17 +429,20 @@ export function Scene3D({
         <color attach="background" args={["#f1f5f9"]} />
         <fog attach="fog" args={["#f1f5f9", 14, 35]} />
 
+        {/* HDRI Studio Lighting Reflection Map - Eliminates Pitch Black Void */}
+        <Environment preset="city" />
+
         {/* Studio Lighting Rig */}
         <ambientLight intensity={0.85} />
-        <directionalLight position={[10, 15, 12]} intensity={2.2} color="#ffffff" />
+        <directionalLight position={[10, 15, 12]} intensity={2.0} color="#ffffff" />
         <directionalLight position={[-8, 6, -6]} intensity={0.9} color="#bae6fd" />
-        <pointLight position={[0, 4, 3]} intensity={1.0} color={activePalette.secondary} />
-        <pointLight position={[0, -2, -4]} intensity={0.6} color={activePalette.primary} />
+        <pointLight position={[0, 4, 3]} intensity={0.8} color={activePalette.secondary} />
+        <pointLight position={[0, -2, -4]} intensity={0.5} color={activePalette.primary} />
 
         {/* Test Cell Ground Bench Grid */}
         <gridHelper args={[24, 24, "#94a3b8", "#cbd5e1"]} position={[0, -1.8, 0]} />
 
-        {/* Photorealistic Ground Contact Shadows */}
+        {/* Ground Contact Shadows */}
         <ContactShadows
           position={[0, -1.79, 0]}
           opacity={0.65}

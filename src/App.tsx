@@ -6,7 +6,7 @@ import { useTelemetrySocket } from "./lib/useTelemetrySocket";
 export function App() {
   const [sceneConfig, setSceneConfig] = useState<SceneConfig>({
     wireframe: false,
-    autoRotate: true,
+    autoRotate: false,
     rotationSpeed: 0.8,
     particleDensity: 2000,
     paletteKey: "isro", // Default ISRO mission control theme
@@ -16,11 +16,14 @@ export function App() {
     explodedView: false,
   });
 
-  // Connect to live FastAPI WebSocket telemetry stream
+  // Connect to live FastAPI WebSocket telemetry stream with persistent state
   const {
     packet,
     federatedSummary,
     isConnected,
+    selectedSpeed,
+    selectedFault,
+    selectedProfile,
     setSpeed,
     pause,
     resume,
@@ -37,7 +40,7 @@ export function App() {
     setSceneConfig((prev) => ({
       ...prev,
       activeFault: faultType === "normal" ? null : faultType,
-      selectedCylinder: targetCylinder || prev.selectedCylinder,
+      selectedCylinder: faultType === "cylinder_head_overheat" ? (targetCylinder || 2) : null,
     }));
     injectFault(faultType, targetCylinder || 2, severity || 0.85);
   };
@@ -48,6 +51,9 @@ export function App() {
       livePacket={packet}
       federatedSummary={federatedSummary}
       isConnected={isConnected}
+      selectedSpeed={selectedSpeed}
+      selectedFault={selectedFault}
+      selectedProfile={selectedProfile}
       onPause={pause}
       onResume={resume}
       onSetSpeed={setSpeed}

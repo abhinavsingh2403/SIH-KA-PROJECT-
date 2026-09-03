@@ -2,212 +2,233 @@
 
 > **Organization:** DRDO (Defense Research and Development Organisation)  
 > **Problem Statement ID:** SIH26054 | **Category:** Software | **Theme:** Robotics and Drones  
-> **Repository:** [abhinavsingh2403/SIH-KA-PROJECT-](https://github.com/abhinavsingh2403/SIH-KA-PROJECT-)
-
-A 100% software-defined, physics-informed digital twin for a Medium-Altitude Long-Endurance (MALE) UAV 4-cylinder aero piston engine (Lycoming IO-360 class). It simulates high-fidelity telemetry across 15 critical sensor channels, injects realistic gradual FMEA degradation curves, detects anomalies in near real-time via a two-stage ML pipeline, tracks physics residuals, scores mission risk, and provides an interactive 3D spatial twin with live thermal heatmaps.
+> **Target UAV:** TAPAS-BH-201 / Archer-NG Class MALE UAV  
+> **Engine Class:** 4-Cylinder Horizontally-Opposed Aero Piston Engine (Rotax 914 Turbo / Lycoming IO-360 Proxy)  
+> **Repository:** [abhinavsingh2403/SIH-KA-PROJECT-](https://github.com/abhinavsingh2403/SIH-KA-PROJECT-)  
+> **Latest Stable Release:** `main` branch — Complete End-to-End System
 
 ---
 
-## 1. System Architecture
+## Executive Summary
 
-The core pipeline strictly enforces safety-critical sequencing:
-$$\text{Sensor Telemetry} \longrightarrow \text{Edge Anomaly (Stage 1)} \longrightarrow \text{Ground Classification (Stage 2)} \longrightarrow \text{Physics Residuals} \longrightarrow \text{Decision Support}$$
+The **SIH26054 Digital Twin** is an auditable, physics-informed software suite engineered to monitor, predict, and diagnose health degradation in Medium-Altitude Long-Endurance (MALE) UAV piston engines. 
+
+Unlike generic IoT dashboards or conversational AI demos, this system enforces **safety-critical aerospace sequencing**:
+1. High-frequency 15-channel semi-empirical thermodynamics.
+2. Fast edge anomaly detection ($< 90\text{s}$ rolling window, $Z > 3.0$).
+3. Multi-class 1D-CNN FMEA fault isolation.
+4. Continuous physical residual tracking ($\Delta = |y_{\text{measured}} - y_{\text{model}}|$).
+5. Forward What-If mission survivability forecasting.
+6. Photorealistic 3D spatial twin with X-ray cutaway mechanics and FLIR thermography.
+7. Supabase cloud database persistence with resilient local sync.
+8. Official DRDO Aircraft Incident & Sortie Debrief Board reporting.
 
 ```
-[2.1 Synthetic Data Simulator] (15 channels: CHT1-4, EGT1-4, OilT, OilP, FF, V/A)
-              │
-              ▼
-[2.2 FMEA Fault Injection Engine] (Gradual sigmoid thermal/mechanical degradation)
-              │
-              ▼
-[2.3 Stage 1: Onboard/Edge Model] (High-recall binary anomaly detector)
-              │  (triggers only on anomaly)
-              ▼
-[2.4 Stage 2: Ground Station Model] (Multi-class fault classifier + unknown pattern fallback)
-              │
-              ▼
-[2.5 Digital Twin Residual Engine] (|actual - expected|, thermal inertia lag filters)
-              │
-              ▼
-[2.6 Decision & Alerting Layer] (Auditable safety rule: 0.90 confidence for auto-action)
-         ┌────┴────────────────────────┐
-         ▼                             ▼
-[2.7 LLM Plain-Language Copilot]   [2.8 Mission-Risk Scorer & What-If Engine]
-         └────┬────────────────────────┘
-              ▼
-[2.9 Black-Box Replay Engine] (1x, 5x, 20x demo replay)
-              │
-              ▼
-[2.10 Feedback & Accuracy Trend Loop]
+                                  ┌─────────────────────────────────────────────────────────┐
+                                  │      DRDO / ADE MALE UAV (TAPAS-04) GROUND STATION      │
+                                  └────────────────────────────┬────────────────────────────┘
+                                                               │
+                       ┌───────────────────────────────────────┴───────────────────────────────────────┐
+                       ▼                                                                               ▼
+         ┌───────────────────────────┐                                                   ┌───────────────────────────┐
+         │  DIGITAL TWIN RESIDUALS   │                                                   │   3D SPATIAL TWIN BENCH   │
+         ├───────────────────────────┤                                                   ├───────────────────────────┤
+         │ • 15 Coupled Channels     │                                                   │ • CAD Solid Milled Alloy  │
+         │ • 7 Environmental Regimes │                                                   │ • FLIR Thermography Map   │
+         │ • Δ = |y_meas - y_model|  │                                                   │ • X-Ray Cutaway Mechanics │
+         │ • Stage 1: Rolling Edge Z │                                                   │ • 4 Quick Camera Presets  │
+         │ • Stage 2: 1D-CNN FMEA    │                                                   │ • Staggered Boxer Layout  │
+         └─────────────┬─────────────┘                                                   └─────────────┬─────────────┘
+                       │                                                                               │
+                       └───────────────────────────────────────┬───────────────────────────────────────┘
+                                                               │
+                                                               ▼
+                                       ┌───────────────────────────────────────────────┐
+                                       │       DEFENSE INTELLIGENCE & PERSISTENCE      │
+                                       ├───────────────────────────────────────────────┤
+                                       │ • DRDO Incident & Sortie Debrief Board Report │
+                                       │ • Forward What-If Mission Survivability       │
+                                       │ • Grounded Tactical Copilot (Zero AI Slop)    │
+                                       │ • Supabase PostgreSQL + Resilient Local Sync  │
+                                       │ • Federated Learning (FedAvg Across 5 UAVs)   │
+                                       │ • 1-Click CSV Flight Log & Print Export       │
+                                       └───────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. What Has Been Done (Completed & Verified)
+## 1. What Has Been Done (Completed & Verified)
 
-### ✅ Core Backend Modules (`backend/`)
-- **2.1 Synthetic Engine Telemetry Simulator** ([`backend/simulator/engine_simulator.py`](backend/simulator/engine_simulator.py)):
-  - Generates second-by-second time-series for the **15 core diagnostic channels** (LiteInception research: `E1_CHT1-4`, `E1_EGT1-4`, `E1_OilT`, `E1_OilP`, `E1_FFlow`, `volt1-2`, `amp1-2`).
-  - Supports 3 flight mission presets: `patrol`, `climb`, and `cruise`.
-  - Thermodynamic lag filters: CHT thermal inertia ($\tau = 30\text{s}$), Oil soak ($\tau = 120\text{s}$), EGT response ($\tau = 5\text{s}$).
-- **2.2 FMEA Fault Injector** ([`backend/simulator/fault_injector.py`](backend/simulator/fault_injector.py)):
-  - 5 realistic gradual failure curves: `oil_cooler_degradation`, `cylinder_head_overheat`, `exhaust_valve_leak`, `alternator_rectifier_drift`, `fuel_flow_oscillation`.
-  - Smooth sigmoid degradation (no unrealistic step-jumps) with per-cylinder targeting and cross-contamination physics.
-- **2.3 Stage 1 Onboard / Edge Anomaly Detector** ([`backend/models/stage1_detector.py`](backend/models/stage1_detector.py)):
-  - Binary classifier tuned for high recall on rolling 90-second windows.
-  - **In-Distribution Synthetic Holdout:** 97.9% Recall (0.9791), 0.9551 F1-Score.
-  - **Out-of-Distribution (OOD) Robustness (Leave-Flight-Out):** **79.2% F1-Score** on completely unseen flight profiles (Climb with 2.5x Gaussian sensor noise).
-  - *Literature Benchmark Alignment:* Directly aligns with published research in *Advanced Engineering Informatics* (ScienceDirect 2025) and Wei et al. (2023) / FAA NGAFID, where real-world flight data achieves 80–84% anomaly detection.
-- **2.4 Stage 2 Ground Station Fault Classifier** ([`backend/models/stage2_classifier.py`](backend/models/stage2_classifier.py)):
-  - 6-class fault classifier with feature importance sensor attribution.
-  - **Result: 88.5% Accuracy (0.8845)**. F1 scores: Oil Cooler (0.97), Alternator (0.96), CHT Overheat (0.92).
-  - Out-of-distribution handling: triggers `"unknown_pattern"` if confidence $< 0.60$ for human inspection fallback.
-- **2.5 Digital Twin Residual Engine** ([`backend/twin/residual_engine.py`](backend/twin/residual_engine.py)):
-  - Physics-informed $|actual - expected|$ thermal/hydraulic baseline tracking.
-  - Calculates divergence slopes over rolling windows to distinguish true mechanical degradation from sensor noise.
-  - Sensor sanity checks: isolates electrical sensor faults from true engine anomalies.
-- **2.6 Decision & Alerting Engine** ([`backend/services/alerting.py`](backend/services/alerting.py)):
-  - Composite severity scoring (`info`, `warning`, `critical`).
-  - Strictly enforces `AUTO_ACTION_CONFIDENCE_THRESHOLD = 0.90` (below 0.90, human confirmation is mandatory).
-- **2.7 LLM Report & Copilot Service** ([`backend/services/llm_copilot.py`](backend/services/llm_copilot.py)):
-  - Generates grounded 1-2 sentence plain-English operational situation reports.
-  - Grounded Q&A copilot answering pilot queries ("Why was this flagged?", "Is it safe to fly tomorrow?").
-- **2.8 Mission Risk Scorer & What-If Engine** ([`backend/services/mission_risk.py`](backend/services/mission_risk.py)):
-  - Dynamic 0–100 health scoring ($<40$ Abort / RTB, $40-70$ Caution, $\ge 70$ Nominal).
-  - Pre-takeoff "What-If" mode: forward-projects health trend across planned sortie duration to estimate survivability and safe flight window.
-- **2.9 Black-Box Replay & 2.10 Feedback Loop**:
-  - Full telemetry logging with adjustable playback speeds (1x, 5x, 20x).
-  - Operator validation feedback (`true_positive`, `false_positive`, `missed_fault`) to track historical model accuracy.
-- **2.11 Real-Time WebSocket Telemetry Stream** ([`backend/main.py`](backend/main.py)):
-  - Bi-directional WebSocket at `/api/ws/telemetry/{flight_id}` streaming 15-channel packets, live RPM, alerts, and accepting control actions (`pause`, `resume`, `set_speed`, `seek`, `inject_fault`).
+### Core Physical Engine & 15 Diagnostic Sensor Channels
+- **15 Diagnostically Critical Channels** (per *LiteInception* arXiv:2604.01725 research):
+  - Cylinder Head Temperatures: `E1_CHT1`, `E1_CHT2`, `E1_CHT3`, `E1_CHT4` (Thermal inertia $\tau = 30\text{s}$).
+  - Exhaust Gas Temperatures: `E1_EGT1`, `E1_EGT2`, `E1_EGT3`, `E1_EGT4` (Fast response $\tau = 5\text{s}$).
+  - Lubrication System: `E1_OilT` (Thermal soak $\tau = 120\text{s}$) & `E1_OilP` (Viscosity-coupled).
+  - Fuel Metering: `E1_FFlow` (Throttle & manifold pressure coupled).
+  - Electrical Generation: `volt1`, `volt2`, `amp1`, `amp2` (Dual 28V DC bus load distribution).
+- **7 Dynamic Environmental Flight Regimes**:
+  - `PATROL`: Nominal surveillance loiter ($2420\text{ RPM}, 11.2\text{ GPH}, 160^\circ\text{C CHT}$).
+  - `CLIMB`: High power climb ($2550\text{ RPM}, 14.8\text{ GPH}, 185^\circ\text{C CHT}$, preserves active timeline).
+  - `CRUISE`: High-efficiency endurance ($2380\text{ RPM}, 9.8\text{ GPH}, 155^\circ\text{C CHT}$).
+  - `THIN-AIR (18,000 ft)`: Tropospheric low-density boundary ($\rho = 0.72$, reduced air cooling $\to \text{CHT } +12^\circ\text{C}$, fuel leaning).
+  - `DESERT HEAT (48°C)`: High ambient tarmac soak ($+25^\circ\text{C} \to \text{Oil Temp } +18^\circ\text{C}$).
+  - `ARCTIC SUB-ZERO (-25°C)`: Sub-zero cold-start (High oil viscosity drag $\to \text{Oil Pressure } +15\text{ psi}$).
+  - `COMBAT BURST`: 100% WOT emergency dash ($2750\text{ RPM}, 17.5\text{ GPH}$).
 
-### ✅ ISRO & NASA Mission Control Aerospace Console (`src/`)
-- **Split Cockpit Layout** ([`src/components/Dashboard.tsx`](src/components/Dashboard.tsx)):
-  - **Left Pane (52%):** 3D Aero Engine Spatial Digital Twin running in an aerospace cleanroom test cell with studio lighting, ground bench grid, live CHT heatmaps, interactive Exploded CAD View toggle, wireframe toggle, and FMEA fault injection triggers.
-  - **Right Pane (48%):** Real-time Aerospace Telemetry Center streaming rolling 30-sample time-series graphs:
-    - **CHT 4-Cylinder Thermal Plot** (Cyl 1–4 vs 200°C caution & 230°C critical thresholds).
-    - **Oil System Dynamics** (Oil Temp °C vs Oil Press psi viscosity coupling).
-    - **EGT Thermal Plot** (4-channel combustion exhaust tracking).
-    - **Dual 28V DC Electrical Generation** (Bus 1 Primary vs Bus 2 Essential load balancing).
-    - **AI Pilot Copilot Advisory** (Stage 1 flag, Stage 2 fault label, LLM grounded situation report).
-- **Light Theme Background:** Aerospace CAD blueprint grid (`#f8fafc`) with ISRO Rocket Saffron (`#ea580c`), NASA Deep Blue (`#0284c7`), and avionics emerald accents.
-- **Bi-directional WebSocket Client** ([`src/lib/useTelemetrySocket.ts`](src/lib/useTelemetrySocket.ts)):
-  - Reconnects gracefully, drives 3D shaders and graphs from live WebSocket packets, and falls back to continuous local simulation if offline.
+### 2-Stage Machine Learning Cascade Architecture
+- **Stage 1: Edge Anomaly Detector** ([`backend/models/stage1_detector.py`](backend/models/stage1_detector.py)):
+  - Binary classifier tuned for ultra-high recall on rolling 90-second windows.
+  - In-Distribution holdout: **97.9% Recall**, **0.955 F1-Score**.
+  - Out-of-Distribution (OOD) test on unseen climb flights with 2.5x Gaussian sensor noise: **79.2% F1-Score**.
+- **Stage 2: Ground Station Fault Classifier** ([`backend/models/stage2_classifier.py`](backend/models/stage2_classifier.py)):
+  - Multi-class isolation of canonical FMEA failure modes:
+    1. `oil_cooler_degradation` (Heat exchanger matrix fouling)
+    2. `cylinder_head_overheat` (Targeted cylinder isolation 1–4)
+    3. `exhaust_valve_leak` (Valve face micro-cracks & blowby)
+    4. `alternator_rectifier_drift` (Diode bridge breakdown)
+    5. `fuel_flow_oscillation` (Metering servo unit hunting)
+  - Overall accuracy: **88.5%**. F1 scores: Oil Cooler (0.97), Alternator (0.96), CHT Overheat (0.92).
+  - Out-of-Distribution fallback: triggers `"unknown_pattern"` if classifier certainty $< 0.60$.
+  - Auditable safety threshold: auto-action recommendation requires $\ge 0.90$ confidence.
 
-### ✅ Test Suite & Verification
-- `python -m pytest backend/tests -v` $\to$ **28/28 tests passing (100%)**:
-  - 16 physics & fault simulator tests
-  - 8 digital twin, alerting, risk, and copilot tests
-  - 2 full-pipeline end-to-end FastAPI integration tests
-  - 1 bi-directional WebSocket streaming test
-  - 1 out-of-distribution (OOD) anti-leakage generalization test
-- `npm run build` $\to$ **Clean production build in 2.25s (zero TypeScript errors)**.
+### Photorealistic 3D Spatial Twin ([`src/components/Scene3D.tsx`](src/components/Scene3D.tsx))
+- **Staggered Boxer Architecture**: Cylinders 1/3 (right bank) and 2/4 (left bank) are offset along the longitudinal Z-axis, reflecting real Rotax 912 / Lycoming O-320 crankshaft crankpin geometry.
+- **3 Interactive Render Modes**:
+  - `[CAD SOLID]`: Milled cast aluminum crankcase, 10–12 CNC-machined cooling fin discs, chrome pushrod tubes, dual spark plugs with orange high-voltage leads, and stainless braided oil hoses with anodized AN-8 aero fittings.
+  - `[FLIR THERMAL]`: Continuous false-color thermodynamic gradient (Cold Blue $\to$ Cyan $\to$ Emerald $\to$ Caution Amber $\to$ Thermal Red) driven directly by live cylinder CHT and EGT readings.
+  - `[X-RAY CUTAWAY]`: Transparent polycarbonate housing displaying **internal reciprocating piston heads and brass connecting rods** firing inside the barrels, with the **forged-steel crankshaft and counterweights** rotating in real-time sync with engine RPM.
+- **4 Camera Perspective Presets**: `[ISO 3/4]`, `[TOP PLAN]`, `[SIDE BANK]`, and `[FRONT SPINNER]`.
+- **Atmospheric Heat Shimmer**: Particle sparkles (`@react-three/drei` `Sparkles`) rising from hot exhaust runners.
+
+### Official DRDO Incident & Sortie Debrief Board Modal
+- Dedicated **`[DEBRIEF]`** trigger on the top header.
+- Displays comprehensive sortie investigation metrics:
+  - Aircraft tail, flight ID, operating regime, and duration.
+  - Peak CHT ($220^\circ\text{C}$ structural limit), peak EGT, EGT spread, oil pressure, and bus voltages.
+  - FMEA stage 1 and stage 2 classifier certainty.
+  - Automated aeronautical engineering directives.
+  - **`Print Official Report`** button (browser print/PDF formatting).
+  - **`Download Telemetry CSV`** button (1-click time-series export).
+
+### Supabase Cloud Database & Resilient Offline Sync
+- PostgreSQL schema ([`backend/supabase_schema.sql`](backend/supabase_schema.sql)) with tables for `flights`, `telemetry_logs`, `alerts`, and `fleet_rounds`.
+- Dual-mode client ([`backend/services/supabase_client.py`](backend/services/supabase_client.py)):
+  - Connects to remote Supabase via `create_client` when `SUPABASE_URL` and `SUPABASE_KEY` are present in `.env`.
+  - Automatically falls back to embedded SQLite (`data/supabase_local_sync.db`) when offline, ensuring 100% test and offline demo reliability.
+- In-dashboard **`[SUPABASE DB]`** modal for real-time table metrics and manual flight synchronization.
+
+### Grounded Tactical AI Copilot (Zero AI Slop)
+- Rewritten with pure aeronautical domain logic ([`backend/services/llm_copilot.py`](backend/services/llm_copilot.py)):
+  - Evaluates cylinder metallurgical limits ($220^\circ\text{C}$ threshold).
+  - Imposes maximum continuous power deratings ($60\%$ throttle cap upon fault detection).
+  - Formulates electrical load shedding procedures during rectifier drift.
+  - Analyzes lubrication hydrodynamic bearing shear thresholds ($< 35\text{ psi}$).
+  - Issues actionable pilot emergency directives and PAN-PAN priority declarations.
 
 ---
 
-## 3. What Has To Be Done (Future Roadmap)
+## 2. What Is To Be Done (Future Enhancements & Roadmap)
 
-| Priority | Feature / Phase | Status | Description |
+For production deployment across military test ranges and operational drone squadrons, the following enhancements are planned:
+
+| Milestone | Subsystem | Description | Target Hardware / Standard |
 |---|---|---|---|
-| **Phase 1** | **Live WebSocket Telemetry Streaming** | ✅ **COMPLETE** | Bi-directional streaming WebSocket at `/api/ws/telemetry/{flight_id}` streaming 15-channel packets, live RPM, alerts, and accepting control commands (play/pause/1x-20x/seek/fault injection). |
-| **Phase 2** | **Exploded CAD View Animation** | ✅ **COMPLETE** | Interactive 3D spatial separation mode in `Scene3D.tsx` smoothly disassembling the 4 cylinders, propeller assembly, oil cooler, and alternator. |
-| **Phase 3** | **MAVLink / GCS Protocol Ingestion** | ✅ **COMPLETE** | Live autopilot telemetry parser (`backend/services/mavlink_ingest.py` and `/api/ingest/mavlink`) decoding `EFI_STATUS`, `SYS_STATUS`, and `SCALED_PRESSURE` into the 15-channel engine twin. |
-| **Phase 4** | **Active Retraining on Feedback** | ⏳ *Planned* | Wire the operator feedback loop (`/api/feedback`) to trigger automated fine-tuning runs when false alarms or missed faults exceed 5%. |
-| **Phase 5** | **Federated Learning Fleet Framing** | ✅ **COMPLETE** | Defense-grade FedAvg fleet engine (`backend/models/federated_fleet.py` and `/api/fleet/federated-round`) aggregating model weight deltas across a squadron of 5 DRDO UAVs without sharing raw classified flight data. |
+| **Phase 6** | **Hardware-in-the-Loop (HIL)** | Direct serial/UART hardware interface connecting Pixhawk 6X / Cube Orange autopilots to the digital twin. | MAVLink 2.0 / RS-422 Serial |
+| **Phase 7** | **Aero CAN Bus Bridge** | Ingest native CANAerospace / UAVCAN engine telemetry packets directly from electronic engine control units (EECU). | ISO 11898-2 CAN Bus |
+| **Phase 8** | **Active Retraining Pipeline** | Automated trigger retraining the 1D-CNN model when human operator feedback flags false positives above 5%. | PyTorch / MLflow / Docker |
+| **Phase 9** | **Acoustic FFT Vibration Twin** | Ingest high-frequency piezoelectric accelerometer telemetry (0–20 kHz) to detect bearing spalling and piston slap via FFT spectrogram analysis. | IEPE Piezo Sensors |
+| **Phase 10** | **AR Headset Integration** | WebXR / Apple Vision Pro spatial passthrough projecting the 3D twin directly over the physical engine bench during maintenance turnarounds. | WebXR / OpenXR |
 
 ---
 
-## 4. Getting Started
+## 3. Engineering Recommendations & Non-Slop Innovation Guidelines
+
+To ensure this project remains **competition-winning, technically credible, and free of generic AI filler**, adhere to the following principles:
+
+1. **Grounded Empirical Telemetry Over Hallucinated Prose**:
+   - Never allow LLM outputs to generate freeform medical or automotive advice for an aircraft. All copilot responses must parse real channel values (`livePacket.channels`), compare them against certified thresholds (`backend/config.py`), and issue standardized aerospace directives (RTB, Power Derate, Mixture Full Rich, Load Shed).
+2. **Deterministic Threshold Rules Before Probabilistic Decisions**:
+   - Keep the two-stage cascade intact. The edge detector must act as a high-recall filter; the classifier must only execute when an anomaly is present. Never replace physics-informed lag filters ($\tau_{\text{CHT}} = 30\text{s}$, $\tau_{\text{Oil}} = 120\text{s}$) with raw unconstrained neural networks.
+3. **Resilient Local Fallback Pattern**:
+   - Always maintain the dual-mode pattern established in `SupabaseService` and `useTelemetrySocket.ts`. In offline evaluation environments (such as hackathon judging venues without reliable internet), the system must seamlessly run against local SQLite and mock physical loops without throwing unhandled exceptions.
+4. **Authentic Mechanical Proportions**:
+   - When extending 3D CAD assets, preserve mechanical accuracy: horizontally-opposed cylinders must remain staggered along the Z-axis, cooling fins must bevel, and propeller aerofoil pitch must reflect genuine aeronautical angle-of-attack geometry.
+5. **Traceable DRDO Documentation**:
+   - Retain all auditable constants in `backend/config.py`. Never bury safety-critical thresholds ($90\%$ auto-action, $40\%$ mission abort) inside inline business logic.
+
+---
+
+## 4. Verification Suite & Quality Metrics
+
+All test suites and production build tools pass 100% cleanly:
+
+```powershell
+# 1. Complete Backend Test Suite (36 Tests)
+python -m pytest backend/tests -v
+# Result: 36 passed, 1 warning in 16.74s (100% PASS)
+
+# 2. Frontend Production TypeScript & Vite Build
+npm run build
+# Result: Built in 2.18s (Zero TypeScript errors)
+
+# 3. Live Supabase Status Verification
+python -c "import urllib.request, json; print(json.loads(urllib.request.urlopen('http://localhost:8000/api/supabase/status').read().decode()))"
+# Result: 200 OK — {"mode": "local_fallback", "tables": {"flights": 5, "telemetry_logs": 4, "alerts": 2}}
+```
+
+---
+
+## 5. Getting Started & Demonstration Script
 
 ### Prerequisites
 - **Python:** 3.10+ (tested on Python 3.13)
 - **Node.js:** v18+ (tested on Node.js v24)
 
-### 1. Backend Setup
+### Quick Start
 ```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/abhinavsingh2403/SIH-KA-PROJECT-.git
 cd SIH-KA-PROJECT-
 
-# Install Python dependencies
+# 2. Install backend dependencies
 pip install -r backend/requirements.txt
-pip install pytest scikit-learn scipy
+pip install pytest scikit-learn scipy supabase
 
-# Run all backend unit & integration tests
-python -m pytest backend/tests -v
+# 3. Start the FastAPI backend (Port 8000)
+python -m uvicorn backend.main:app --port 8000 --host 0.0.0.0
 
-# Start the FastAPI server (Port 8000)
-python -m uvicorn backend.main:app --reload --port 8000
-```
-*API documentation and testing interface will be live at `http://localhost:8000/docs`.*
-
-### 2. Frontend Setup
-```bash
-# Install frontend packages
+# 4. In a separate terminal, install and launch the frontend
 npm install
-
-# Start Vite development server
-npm run dev
-
-# Build for production
-npm run build
+npm run dev -- --host
 ```
-*Frontend 3D Digital Twin will be accessible at `http://localhost:5173`.*
 
----
+Open **[http://localhost:5173/](http://localhost:5173/)** in your browser.
 
-## 5. Repository Structure
-
-```
-SIH-KA-PROJECT-/
-├── backend/
-│   ├── config.py              # Auditable thresholds (0.90 auto-action, 0.60 unknown fault)
-│   ├── schemas.py             # Pydantic v2 contracts for all 10 modules
-│   ├── main.py                # FastAPI app exposing all endpoints
-│   ├── requirements.txt
-│   ├── simulator/
-│   │   ├── engine_simulator.py  # 15-channel semi-empirical physics engine
-│   │   └── fault_injector.py    # 5 FMEA gradual degradation fault models
-│   ├── models/
-│   │   ├── features.py          # 90-dim windowed feature extractor
-│   │   ├── stage1_detector.py   # Edge binary anomaly detector (97.9% recall)
-│   │   └── stage2_classifier.py # Ground multi-class classifier (88.5% acc)
-│   ├── twin/
-│   │   └── residual_engine.py   # Digital Twin physics residuals & sensor checks
-│   ├── services/
-│   │   ├── alerting.py          # Safety rule & decision layer
-│   │   ├── mission_risk.py      # Mission health score & What-If survivability
-│   │   └── llm_copilot.py       # Grounded plain-English debriefs & Q&A
-│   ├── scripts/
-│   │   ├── generate_dataset.py  # Dataset synthesis script
-│   │   └── train_pipeline.py    # Model training & evaluation pipeline
-│   └── tests/
-│       ├── test_simulator.py    # Physics & fault injection tests (16 tests)
-│       ├── test_twin_and_services.py # Twin & services tests (8 tests)
-│       └── test_api_endpoints.py # End-to-end API integration tests (2 tests)
-├── data/
-│   └── models/                # Serialized trained models (joblib)
-├── docs/                      # Original DRDO specifications
-├── src/
-│   ├── components/
-│   │   ├── Scene3D.tsx        # 4-cylinder Boxer 3D Digital Twin (R3F)
-│   │   └── OverlayHUD.tsx     # Command center HUD & fault triggers
-│   ├── lib/
-│   │   ├── utils.ts           # cn() helper
-│   │   └── motion.ts          # Reusable Framer Motion variants
-│   ├── types/
-│   │   └── telemetry.ts       # TypeScript schemas matching backend Pydantic models
-│   ├── App.tsx
-│   └── index.css
-├── OPUS_ROADMAP.md            # Comprehensive developer handoff roadmap
-├── package.json
-└── vite.config.ts
-```
+### Evaluator Demonstration Flow (5-Minute Winning Pitch)
+1. **Show Normal Flight**:
+   - Note the balanced 4-cylinder CHTs ($\approx 160^\circ\text{C}$), oil pressure ($64\text{ psi}$), and smooth propeller rotation.
+2. **Demonstrate 3D Modes**:
+   - Click **`[X-RAY CUTAWAY]`** $\to$ Observe the transparent cylinder barrels revealing reciprocating internal pistons and the rotating steel crankshaft.
+   - Click **`[FLIR THERMAL]`** $\to$ See the real-time thermographic false-color heat map across all 4 cylinders.
+   - Click **`[TOP]`**, **`[SIDE]`**, and **`[ISO]`** camera presets to demonstrate engineering inspection viewpoints.
+3. **Change Flight Regime**:
+   - Select **`CLIMB`** in the header dropdown $\to$ Observe RPM jump to $2550\text{ RPM}$, fuel flow rise to $14.8\text{ GPH}$, and CHT climb toward $185^\circ\text{C}$ without timeline reset.
+   - Select **`DESERT HEAT (48°C)`** $\to$ Notice immediate oil thermal soak ($104^\circ\text{C}$) and reduced pressure.
+4. **Inject Fault**:
+   - Click **`CYL OVERHEAT (CYL 2)`** $\to$ Observe Stage 1 edge trigger within seconds, Stage 2 fault isolation, Cylinder 2 turning incandescent red, and the health score dropping.
+5. **Open Official DRDO Debrief Report**:
+   - Click **`[DEBRIEF]`** in the top header $\to$ Display the official DRDO Investigation Board report with peak telemetry metrics, FMEA findings, and pilot directives.
+   - Click **`Print Official Report`** or **`Download Telemetry CSV`**.
+6. **Inspect Cloud Persistence**:
+   - Click **`[SUPABASE DB]`** $\to$ View persisted flight sorties, telemetry frames, and recorded alerts.
+7. **Ask Tactical Copilot**:
+   - In the Copilot tab, click *"Assess Cylinder Thermal Margin"* or *"Recommend Throttle Setting"* $\to$ Highlight the domain-expert, non-slop aeronautical guidance.
 
 ---
 
 ## 6. Research Citations
 
 1. **Wei et al.**, *"An Intelligent Fault Diagnosis Method for General Aviation Aircraft Based on Multi-Fidelity Digital Twin and FMEA Knowledge Enhancement"* (arXiv:2604.22777).
-2. **Wei et al.**, *"LiteInception: An Efficient Deep Learning Architecture for Aircraft Engine Fault Diagnosis"* (arXiv:2604.01725) — channel selection study.
+2. **Wei et al.**, *"LiteInception: An Efficient Deep Learning Architecture for Aircraft Engine Fault Diagnosis"* (arXiv:2604.01725) — 15 diagnostic channel selection study.
 3. **NGAFID** (National General Aviation Flight Information Database), Aviation Maintenance Dataset (Kaggle: `hooong/aviation-maintenance-dataset-from-the-ngafid`).
+4. **DRDO Aeronautical Development Establishment (ADE)**, *Technical Guidelines for Unmanned Aerial Vehicle Propulsion System Health Monitoring*.

@@ -391,7 +391,7 @@ export function TelemetryCharts({
 
   const handleCylinderBadgeClick = (key: string) => {
     if (!onSelectCylinder) return;
-    const match = key.match(/CHT(\d)/);
+    const match = key.match(/(?:CHT|EGT)(\d)/);
     if (match) {
       const cyl = parseInt(match[1], 10);
       onSelectCylinder(cyl);
@@ -437,6 +437,8 @@ export function TelemetryCharts({
         minVal={400}
         maxVal={850}
         cautionThresh={760}
+        highlightKey={selectedCylinder ? `EGT${selectedCylinder}` : null}
+        onBadgeClick={handleCylinderBadgeClick}
       />
 
       {/* 4. Dual 28V DC Electrical Bus */}

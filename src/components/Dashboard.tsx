@@ -34,8 +34,10 @@ interface DashboardProps {
   selectedSpeed?: number;
   selectedFault?: string;
   selectedProfile?: string;
+  isPaused?: boolean;
   onPause: () => void;
   onResume: () => void;
+  onSeek?: (t: number) => void;
   onSetSpeed: (speed: number) => void;
   onSetProfile: (profile: string) => void;
   onTriggerFederated: () => void;
@@ -91,8 +93,10 @@ export function Dashboard({
   selectedSpeed,
   selectedFault,
   selectedProfile,
+  isPaused: isPausedProp,
   onPause,
   onResume,
+  onSeek,
   onSetSpeed,
   onSetProfile,
   onTriggerFederated,
@@ -133,7 +137,7 @@ export function Dashboard({
 
   const currentRPM = livePacket?.rpm || config.rpm;
   const currentSpeed = selectedSpeed ?? livePacket?.speed ?? 1.0;
-  const isPaused = livePacket?.is_paused ?? false;
+  const isPaused = isPausedProp ?? livePacket?.is_paused ?? false;
 
   const activeProfile = selectedProfile ?? livePacket?.profile ?? "patrol";
   const healthScore = livePacket?.mission_risk?.health_score ?? 96.0;
@@ -168,6 +172,15 @@ export function Dashboard({
   const oilP = livePacket?.channels?.E1_OilP ?? 64;
   const bus1V = livePacket?.channels?.volt1 ?? 28.4;
 
+  // Dynamic API base host for robust local / LAN connections
+  const getApiBase = () => {
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname || "localhost";
+      return `http://${host}:8000`;
+    }
+    return "http://localhost:8000";
+  };
+
   // Handle Copilot Chat Query
   const handleSendCopilotMessage = async (queryText?: string) => {
     const textToSend = (queryText || copilotInput).trim();
@@ -179,7 +192,7 @@ export function Dashboard({
 
     try {
       const flightId = livePacket?.flight_id || "flight_demo";
-      const res = await fetch("http://localhost:8000/api/copilot/chat", {
+      const res = await fetch(`${getApiBase()}/api/copilot/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ flight_id: flightId, message: textToSend }),
@@ -205,7 +218,7 @@ export function Dashboard({
   const handleRunWhatIf = async () => {
     setIsWhatIfRunning(true);
     try {
-      const res = await fetch("http://localhost:8000/api/mission-risk/what-if", {
+      const res = await fetch(`${getApiBase()}/api/mission-risk/what-if`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -497,8 +510,15 @@ export function Dashboard({
               </div>
 
               {config.selectedCylinder && (
-                <div className="bg-sky-100 border border-sky-400 text-sky-950 rounded-md px-2 py-0.5 text-[10px] font-bold shadow-xs">
-                  FOCUS: CYLINDER {config.selectedCylinder}
+                <div className="bg-sky-100 border border-sky-400 text-sky-950 rounded-md px-2 py-0.5 text-[10px] font-bold shadow-xs flex items-center gap-1.5 pointer-events-auto">
+                  <span>FOCUS: CYLINDER {config.selectedCylinder}</span>
+                  <button
+                    onClick={() => onChange({ selectedCylinder: null })}
+                    className="hover:text-red-600 font-bold ml-0.5 cursor-pointer"
+                    title="Clear cylinder focus"
+                  >
+                    ✕
+                  </button>
                 </div>
               )}
             </div>
@@ -866,16 +886,20 @@ export function Dashboard({
           </div>
         </div>
 
-        {/* Fixed-Width Scrubber Bar */}
+        {/* Interactive Flight Scrubber Bar */}
         <div className="w-64 sm:w-80 md:w-96 flex items-center gap-2">
-          <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-orange-500 to-sky-600 transition-all duration-150"
-              style={{ width: `${livePacket?.progress_pct ?? 20}%` }}
-            />
-          </div>
+          <input
+            type="range"
+            min={0}
+            max={totalFlightTime}
+            step={1}
+            value={Math.round(currentFlightTime)}
+            onChange={(e) => onSeek?.(parseFloat(e.target.value))}
+            className="flex-1 h-1.5 bg-slate-200 rounded-full appearance-none accent-sky-600 cursor-pointer hover:bg-slate-300 transition-colors"
+            title="Drag to seek sortie timeline"
+          />
           <span className="text-[10px] font-mono-tech font-bold text-slate-500 w-10 text-right tabular-nums">
-            {livePacket?.progress_pct ?? 20}%
+            {livePacket?.progress_pct ?? Math.round((currentFlightTime / Math.max(1, totalFlightTime)) * 100)}%
           </span>
         </div>
 

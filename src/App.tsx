@@ -24,9 +24,11 @@ export function App() {
     selectedSpeed,
     selectedFault,
     selectedProfile,
+    isPaused,
     setSpeed,
     pause,
     resume,
+    seek,
     setProfile,
     triggerFederated,
     injectFault,
@@ -54,8 +56,10 @@ export function App() {
       selectedSpeed={selectedSpeed}
       selectedFault={selectedFault}
       selectedProfile={selectedProfile}
+      isPaused={isPaused}
       onPause={pause}
       onResume={resume}
+      onSeek={seek}
       onSetSpeed={setSpeed}
       onSetProfile={setProfile}
       onTriggerFederated={triggerFederated}

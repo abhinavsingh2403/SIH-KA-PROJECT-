@@ -111,9 +111,9 @@ $$\text{Sensor Telemetry} \longrightarrow \text{Edge Anomaly (Stage 1)} \longrig
 |---|---|---|---|
 | **Phase 1** | **Live WebSocket Telemetry Streaming** | ✅ **COMPLETE** | Bi-directional streaming WebSocket at `/api/ws/telemetry/{flight_id}` streaming 15-channel packets, live RPM, alerts, and accepting control commands (play/pause/1x-20x/seek/fault injection). |
 | **Phase 2** | **Exploded CAD View Animation** | ✅ **COMPLETE** | Interactive 3D spatial separation mode in `Scene3D.tsx` smoothly disassembling the 4 cylinders, propeller assembly, oil cooler, and alternator. |
-| **Phase 3** | **MAVLink / GCS Protocol Ingestion** | ⏳ *Planned* | Add a MAVLink message parser to accept real ArduPilot/PX4 or SITL telemetry feeds into the Digital Twin. |
+| **Phase 3** | **MAVLink / GCS Protocol Ingestion** | ✅ **COMPLETE** | Live autopilot telemetry parser (`backend/services/mavlink_ingest.py` and `/api/ingest/mavlink`) decoding `EFI_STATUS`, `SYS_STATUS`, and `SCALED_PRESSURE` into the 15-channel engine twin. |
 | **Phase 4** | **Active Retraining on Feedback** | ⏳ *Planned* | Wire the operator feedback loop (`/api/feedback`) to trigger automated fine-tuning runs when false alarms or missed faults exceed 5%. |
-| **Phase 5** | **Federated Learning Fleet Framing** | ⏳ *Planned* | Intersperse edge-model weight delta aggregation across multiple UAV squadrons to enable collective intelligence without sharing classified flight telemetry. |
+| **Phase 5** | **Federated Learning Fleet Framing** | ✅ **COMPLETE** | Defense-grade FedAvg fleet engine (`backend/models/federated_fleet.py` and `/api/fleet/federated-round`) aggregating model weight deltas across a squadron of 5 DRDO UAVs without sharing raw classified flight data. |
 
 ---
 

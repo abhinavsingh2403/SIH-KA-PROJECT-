@@ -54,6 +54,8 @@ from backend.twin.residual_engine import DigitalTwinResidualEngine
 from backend.services.alerting import DecisionAlertingEngine
 from backend.services.mission_risk import MissionRiskScorer
 from backend.services.llm_copilot import LLMCopilotService
+from backend.services.mavlink_ingest import MAVLinkTelemetryParser
+from backend.models.federated_fleet import FleetFederatedAggregator
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -68,6 +70,8 @@ residual_engine = DigitalTwinResidualEngine()
 alerting_engine = DecisionAlertingEngine()
 risk_scorer = MissionRiskScorer()
 copilot_service = LLMCopilotService()
+mavlink_parser = MAVLinkTelemetryParser()
+fleet_aggregator = FleetFederatedAggregator(squadron_size=5)
 
 # Load or instantiate ML models
 stage1_model = Stage1Detector()
@@ -515,6 +519,46 @@ async def websocket_telemetry_stream(
 
     except WebSocketDisconnect:
         pass
+
+
+# ─── 2.12 MAVLink / Autopilot Ingestion Protocol ────────────────────────────────
+
+@app.post("/api/ingest/mavlink")
+def ingest_mavlink_telemetry(payload: dict):
+    """
+    Ingests live MAVLink GCS packets (EFI_STATUS, SYS_STATUS, SCALED_PRESSURE)
+    from ArduPilot / PX4 and normalizes them into the 15-channel engine twin vector.
+    """
+    snapshot = mavlink_parser.parse_mavlink_json(payload)
+    return {
+        "status": "ingested",
+        "messages_total": mavlink_parser.messages_processed,
+        "last_update": mavlink_parser.last_update_time,
+        "engine_telemetry_snapshot": snapshot,
+    }
+
+
+# ─── 2.13 Federated Learning Fleet Framing (FedAvg) ─────────────────────────────
+
+@app.post("/api/fleet/federated-round")
+def run_fleet_federated_round(round_num: int = 1):
+    """
+    Executes a Federated Averaging (FedAvg) communication round across a squadron
+    of 5 DRDO MALE UAVs (TAPAS-01 to TAPAS-05) without sharing raw flight telemetry.
+    """
+    summary = fleet_aggregator.execute_federated_round(round_num=round_num)
+    return summary
+
+
+@app.get("/api/fleet/status")
+def get_fleet_federated_status():
+    """Returns the current squadron status and history of federated rounds."""
+    return {
+        "squadron_size": len(fleet_aggregator.clients),
+        "uav_units": [c.uav_id for c in fleet_aggregator.clients],
+        "rounds_completed": len(fleet_aggregator.round_history),
+        "history": fleet_aggregator.round_history,
+    }
 
 
 # ─── Entrypoint ─────────────────────────────────────────────────────────────────

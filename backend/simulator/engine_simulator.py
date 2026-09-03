@@ -118,11 +118,31 @@ def generate_flight(
     ])
     rpm = 1800.0 + throttle * 900.0
 
+    # --- Environmental Boundary Conditions ---
+    amb_temp_offset = 0.0
+    cht_env_offset = 0.0
+    oil_t_target_offset = 0.0
+    oil_p_offset = 0.0
+    fflow_offset = 0.0
+
+    if profile == "high_altitude":
+        cht_env_offset = 12.0
+        fflow_offset = -0.8
+    elif profile == "desert_heat":
+        amb_temp_offset = 25.0
+        oil_t_target_offset = 16.0
+        cht_env_offset = 9.0
+    elif profile == "arctic_cold":
+        amb_temp_offset = -30.0
+        oil_t_target_offset = -18.0
+        oil_p_offset = 15.0
+    elif profile == "combat_burst":
+        cht_env_offset = 14.0
+        oil_t_target_offset = 10.0
+
     # --- Cylinder Head Temperatures (CHT1–4) ---
-    # Per-cylinder offsets simulate manufacturing variance and cooling asymmetry
-    # Cylinders 1 & 3 (front) run ~5–10°C hotter than 2 & 4 (rear)
     cylinder_offsets = [7.0, -3.0, 8.0, -5.0]
-    cht_base = 90.0 + (rpm / 2700.0) * 150.0
+    cht_base = 90.0 + (rpm / 2700.0) * 150.0 + cht_env_offset
 
     # Thermal inertia: CHT responds slowly (τ ≈ 30s)
     tau_cht = 30.0
@@ -162,9 +182,9 @@ def generate_flight(
     # --- Oil Temperature ---
     # Slow thermal soak (τ ≈ 120s), rises with RPM
     tau_oil_t = 120.0
-    oil_t_target = 60.0 + (rpm / 2700.0) * 55.0
+    oil_t_target = 60.0 + (rpm / 2700.0) * 55.0 + oil_t_target_offset
     oil_t = np.zeros(n_samples)
-    oil_t[0] = 65.0  # cold start
+    oil_t[0] = max(10.0, 65.0 + amb_temp_offset)
     for i in range(1, n_samples):
         alpha = dt / (tau_oil_t + dt)
         oil_t[i] = oil_t[i - 1] + alpha * (oil_t_target[i] - oil_t[i - 1])
@@ -176,13 +196,13 @@ def generate_flight(
     oil_p_base = 80.0 - (rpm / 2700.0) * 35.0
     # Temperature correction: higher oil temp → lower pressure
     temp_correction = -0.15 * (oil_t - 80.0)
-    oil_p = oil_p_base + temp_correction
+    oil_p = oil_p_base + temp_correction + oil_p_offset
     oil_p += rng.normal(0, 1.0, n_samples)
     oil_p = np.clip(oil_p, 20.0, 100.0)
     channels["E1_OilP"] = oil_p
 
     # --- Fuel Flow ---
-    fflow = 6.0 + throttle * 12.0
+    fflow = 6.0 + throttle * 12.0 + fflow_offset
     fflow += rng.normal(0, 0.3, n_samples)
     fflow = np.clip(fflow, 2.0, 25.0)
     channels["E1_FFlow"] = fflow

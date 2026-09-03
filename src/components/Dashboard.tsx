@@ -326,23 +326,31 @@ export function Dashboard({
 
           <div className="h-6 w-px bg-slate-200 hidden lg:block shrink-0" />
 
-          {/* Mission Profile Switcher */}
-          <div className="hidden lg:flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200 shrink-0">
-            <span className="text-[10px] font-mono-tech text-slate-400 px-1.5 flex items-center gap-1">
+          {/* Mission Profile & Environmental Regime Switcher */}
+          <div className="hidden lg:flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200 shrink-0 overflow-x-auto max-w-xl custom-scrollbar">
+            <span className="text-[10px] font-mono-tech text-slate-400 px-1.5 flex items-center gap-1 shrink-0">
               <Compass className="w-3 h-3 text-sky-600" />
-              PROFILE:
+              REGIME:
             </span>
-            {(["patrol", "climb", "cruise"] as const).map((p) => (
+            {[
+              { id: "patrol", label: "Patrol" },
+              { id: "climb", label: "Climb" },
+              { id: "cruise", label: "Cruise" },
+              { id: "high_altitude", label: "Thin-Air (18k')" },
+              { id: "desert_heat", label: "Desert (48°C)" },
+              { id: "arctic_cold", label: "Arctic (-25°C)" },
+              { id: "combat_burst", label: "Combat Burst" },
+            ].map(({ id, label }) => (
               <button
-                key={p}
-                onClick={() => onSetProfile(p)}
-                className={`px-2 py-0.5 rounded text-[10px] font-mono-tech font-bold uppercase transition-all cursor-pointer ${
-                  activeProfile === p
+                key={id}
+                onClick={() => onSetProfile(id)}
+                className={`px-2 py-0.5 rounded text-[10px] font-mono-tech font-bold uppercase transition-all cursor-pointer whitespace-nowrap ${
+                  activeProfile === id
                     ? "bg-white text-slate-900 shadow-xs border border-slate-200"
                     : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                {p}
+                {label}
               </button>
             ))}
           </div>
@@ -514,6 +522,27 @@ export function Dashboard({
 
             {/* Quick 3D Viewport Actions */}
             <div className="flex items-center gap-1.5">
+              {/* 3D Render Modes (Solid, FLIR, X-Ray) */}
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-md border border-slate-200">
+                {[
+                  { id: "solid", label: "CAD Solid" },
+                  { id: "flir", label: "FLIR Thermal" },
+                  { id: "xray", label: "X-Ray Cutaway" },
+                ].map(({ id, label }) => (
+                  <button
+                    key={id}
+                    onClick={() => onChange({ renderMode: id as any })}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono-tech font-bold uppercase transition-all cursor-pointer ${
+                      (config.renderMode || "solid") === id
+                        ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
               <button
                 onClick={() => onChange({ explodedView: !config.explodedView })}
                 className={`flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold rounded-md border transition-all cursor-pointer ${

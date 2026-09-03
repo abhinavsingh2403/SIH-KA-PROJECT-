@@ -143,7 +143,7 @@ export function useTelemetrySocket(url: string = getWsUrl()) {
       }
 
       const t = simTime;
-      const rpmBase = profile === "climb" ? 2550 : profile === "cruise" ? 2380 : 2420;
+      let rpmBase = profile === "climb" ? 2550 : profile === "cruise" ? 2380 : profile === "combat_burst" ? 2750 : profile === "high_altitude" ? 2580 : 2420;
       const rpm = rpmBase + Math.sin(t * 0.1) * 40;
 
       // Realistic baseline channel physics
@@ -164,6 +164,38 @@ export function useTelemetrySocket(url: string = getWsUrl()) {
         E1_EGT3: 645.0 + Math.sin(t * 0.05) * 4.0,
         E1_EGT4: 630.0 + Math.cos(t * 0.05) * 4.0,
       };
+
+      // Environmental Boundary Conditions Offsets
+      if (profile === "high_altitude") {
+        mockChannels.E1_CHT1 += 12.0;
+        mockChannels.E1_CHT2 += 12.0;
+        mockChannels.E1_CHT3 += 12.0;
+        mockChannels.E1_CHT4 += 12.0;
+        mockChannels.E1_FFlow -= 0.8;
+      } else if (profile === "desert_heat") {
+        mockChannels.E1_OilT += 18.0;
+        mockChannels.E1_CHT1 += 9.0;
+        mockChannels.E1_CHT2 += 9.0;
+        mockChannels.E1_CHT3 += 9.0;
+        mockChannels.E1_CHT4 += 9.0;
+      } else if (profile === "arctic_cold") {
+        mockChannels.E1_OilP += 15.0;
+        mockChannels.E1_OilT -= 18.0;
+        mockChannels.E1_CHT1 -= 10.0;
+        mockChannels.E1_CHT2 -= 10.0;
+        mockChannels.E1_CHT3 -= 10.0;
+        mockChannels.E1_CHT4 -= 10.0;
+      } else if (profile === "combat_burst") {
+        mockChannels.E1_EGT1 += 65.0;
+        mockChannels.E1_EGT2 += 65.0;
+        mockChannels.E1_EGT3 += 65.0;
+        mockChannels.E1_EGT4 += 65.0;
+        mockChannels.E1_FFlow += 4.5;
+        mockChannels.E1_CHT1 += 14.0;
+        mockChannels.E1_CHT2 += 14.0;
+        mockChannels.E1_CHT3 += 14.0;
+        mockChannels.E1_CHT4 += 14.0;
+      }
 
       let healthScore = 96.0;
       let isAnomalous = false;

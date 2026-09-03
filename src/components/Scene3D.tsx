@@ -1,8 +1,10 @@
 import { useState, useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, ContactShadows, Environment } from "@react-three/drei";
+import { OrbitControls, ContactShadows, Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { type LiveTelemetryPacket } from "../types/telemetry";
+
+export type RenderMode = "solid" | "flir" | "xray";
 
 export interface SceneConfig {
   wireframe: boolean;
@@ -14,34 +16,44 @@ export interface SceneConfig {
   activeFault: string | null;
   rpm: number;
   explodedView: boolean;
+  renderMode?: RenderMode;
 }
 
-// Aerospace & Mission Control Palettes (ISRO Saffron, NASA Blue, Titanium Gray)
+// Aerospace Palettes
 export const PALETTES: Record<string, { primary: string; secondary: string; accent: string; label: string; name: string }> = {
   isro: {
-    primary: "#ea580c",    // ISRO Rocket Saffron
-    secondary: "#0284c7",  // ISRO Deep Sky Blue
-    accent: "#10b981",     // Nominal Emerald
+    primary: "#ea580c",
+    secondary: "#0284c7",
+    accent: "#10b981",
     label: "ISRO Telemetry",
     name: "ISRO Saffron",
   },
   nasa: {
-    primary: "#0284c7",    // NASA Horizon Blue
-    secondary: "#ef4444",  // NASA Vector Red
-    accent: "#38bdf8",     // Apollo Cyan
+    primary: "#0284c7",
+    secondary: "#ef4444",
+    accent: "#38bdf8",
     label: "NASA Mission Control",
     name: "NASA Blue",
   },
   titanium: {
-    primary: "#475569",    // Aero Slate
-    secondary: "#0ea5e9",  // Blue Neon
-    accent: "#f59e0b",     // Amber Caution
+    primary: "#475569",
+    secondary: "#0ea5e9",
+    accent: "#f59e0b",
     label: "CAD Titanium",
     name: "CAD Titanium",
   },
 };
 
-// ─── Individual Cylinder Assembly with Cooling Fins & Shaders ─────────────────
+// Continuous FLIR Thermal Spectrum: Cold Blue -> Cyan -> Green -> Amber -> Fiery Red
+function getFlirThermalColor(tempC: number): string {
+  if (tempC < 140) return "#1e3a8a"; // Deep navy (cold)
+  if (tempC < 170) return "#0284c7"; // Cyan
+  if (tempC < 195) return "#10b981"; // Emerald nominal
+  if (tempC < 220) return "#f59e0b"; // Caution amber
+  return "#dc2626"; // Thermal runaway red
+}
+
+// ─── Individual Cylinder Assembly with Aerospace Details ───────────────────────
 
 interface CylinderProps {
   id: number;
@@ -49,8 +61,11 @@ interface CylinderProps {
   position: [number, number, number];
   rotation: [number, number, number];
   tempC: number;
+  egtC: number;
   isSelected: boolean;
   wireframe: boolean;
+  renderMode: RenderMode;
+  engineRpm: number;
   onSelect: (id: number) => void;
 }
 
@@ -60,34 +75,61 @@ function PistonCylinder({
   position,
   rotation,
   tempC,
+  egtC,
   isSelected,
   wireframe,
+  renderMode,
+  engineRpm,
   onSelect,
 }: CylinderProps) {
   const [hovered, setHovered] = useState(false);
+  const pistonRef = useRef<THREE.Mesh>(null);
+  const rodRef = useRef<THREE.Mesh>(null);
 
-  // Realistic thermal physics: Normal is clean machined alloy (#64748b).
-  // Thermal glow ONLY activates during actual high-temperature overheating (> 195°C).
   const isOverheating = tempC > 195;
   const isCritical = tempC > 225;
 
-  const headColor = useMemo(() => {
-    if (isCritical) return "#dc2626";     // Red thermal runaway
-    if (isOverheating) return "#ea580c";  // Orange high thermal stress
-    return "#64748b";                     // Sleek aeronautical alloy
-  }, [isOverheating, isCritical]);
+  // Reciprocating internal piston motion in X-Ray mode
+  useFrame(({ clock }) => {
+    if (renderMode === "xray" && pistonRef.current && rodRef.current) {
+      const speed = (engineRpm / 60) * Math.PI * 2 * 0.1;
+      const phase = (id % 2 === 0 ? 0 : Math.PI);
+      const stroke = Math.sin(clock.getElapsedTime() * speed + phase) * 0.28;
+      pistonRef.current.position.y = 0.7 + stroke;
+      rodRef.current.position.y = 0.35 + stroke * 0.5;
+    }
+  });
 
-  const emissiveGlow = useMemo(() => {
+  // Material Colors based on Active Render Mode
+  const barrelColor = useMemo(() => {
+    if (renderMode === "flir") return getFlirThermalColor(tempC);
+    if (renderMode === "xray") return "#94a3b8";
+    return hovered ? "#475569" : "#334155";
+  }, [renderMode, tempC, hovered]);
+
+  const headColor = useMemo(() => {
+    if (renderMode === "flir") return getFlirThermalColor(tempC);
+    if (renderMode === "xray") return "#cbd5e1";
+    if (isCritical) return "#dc2626";
+    if (isOverheating) return "#ea580c";
+    return "#64748b";
+  }, [renderMode, tempC, isCritical, isOverheating]);
+
+  const headEmissive = useMemo(() => {
+    if (renderMode === "flir") return getFlirThermalColor(tempC);
     if (isCritical) return "#ef4444";
     if (isOverheating) return "#f97316";
     return "#000000";
-  }, [isOverheating, isCritical]);
+  }, [renderMode, tempC, isCritical, isOverheating]);
 
-  const emissiveIntensity = useMemo(() => {
-    if (isCritical) return 0.85;
-    if (isOverheating) return 0.45;
+  const headEmissiveIntensity = useMemo(() => {
+    if (renderMode === "flir") return 0.5;
+    if (isCritical) return 0.9;
+    if (isOverheating) return 0.5;
     return 0.0;
-  }, [isOverheating, isCritical]);
+  }, [renderMode, isCritical, isOverheating]);
+
+  const isXray = renderMode === "xray";
 
   return (
     <group
@@ -108,46 +150,66 @@ function PistonCylinder({
         document.body.style.cursor = "auto";
       }}
     >
-      {/* Cylinder Barrel Body (Machined High-Strength Steel Alloy) */}
+      {/* Cylinder Barrel Body (Machined Steel / Transparent X-Ray Glass) */}
       <mesh position={[0, 0.7, 0]}>
-        <cylinderGeometry args={[0.55, 0.55, 1.2, 32]} />
+        <cylinderGeometry args={[0.55, 0.55, 1.25, 32]} />
         <meshStandardMaterial
-          color={hovered ? "#475569" : "#334155"}
-          roughness={0.4}
-          metalness={0.7}
+          color={barrelColor}
+          roughness={isXray ? 0.1 : 0.35}
+          metalness={isXray ? 0.1 : 0.75}
+          transparent={isXray}
+          opacity={isXray ? 0.35 : 1.0}
           wireframe={wireframe}
         />
       </mesh>
 
-      {/* 5 CNC Cooling Fin Discs (Polished Edges) */}
-      {[0.3, 0.5, 0.7, 0.9, 1.1].map((y, idx) => (
+      {/* Internal Reciprocating Piston Head (Revealed in X-Ray Mode) */}
+      {isXray && (
+        <>
+          <mesh ref={pistonRef} position={[0, 0.7, 0]}>
+            <cylinderGeometry args={[0.52, 0.52, 0.3, 24]} />
+            <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.2} />
+          </mesh>
+          <mesh ref={rodRef} position={[0, 0.35, 0]}>
+            <cylinderGeometry args={[0.08, 0.08, 0.6, 16]} />
+            <meshStandardMaterial color="#f59e0b" metalness={0.8} roughness={0.3} />
+          </mesh>
+        </>
+      )}
+
+      {/* 9 Precision Thin CNC Cooling Fin Discs */}
+      {[0.25, 0.37, 0.49, 0.61, 0.73, 0.85, 0.97, 1.09, 1.21].map((y, idx) => (
         <mesh key={idx} position={[0, y, 0]}>
-          <cylinderGeometry args={[0.7, 0.7, 0.04, 32]} />
+          <cylinderGeometry args={[0.72, 0.72, 0.035, 32]} />
           <meshStandardMaterial
-            color="#94a3b8"
-            metalness={0.85}
+            color={renderMode === "flir" ? getFlirThermalColor(tempC) : "#94a3b8"}
+            metalness={isXray ? 0.2 : 0.85}
             roughness={0.25}
+            transparent={isXray}
+            opacity={isXray ? 0.4 : 1.0}
             wireframe={wireframe}
           />
         </mesh>
       ))}
 
-      {/* Cylinder Head Chamber (Authentic Aeronautical Alloy with Thermal Glow) */}
-      <mesh position={[0, 1.45, 0]}>
-        <cylinderGeometry args={[0.62, 0.58, 0.4, 32]} />
+      {/* Cylinder Head (High-Conductivity Aeronautical Aluminum Casting) */}
+      <mesh position={[0, 1.5, 0]}>
+        <cylinderGeometry args={[0.64, 0.6, 0.45, 32]} />
         <meshStandardMaterial
           color={headColor}
-          emissive={emissiveGlow}
-          emissiveIntensity={emissiveIntensity}
-          roughness={0.3}
-          metalness={0.7}
+          emissive={headEmissive}
+          emissiveIntensity={headEmissiveIntensity}
+          roughness={isXray ? 0.1 : 0.3}
+          metalness={isXray ? 0.2 : 0.7}
+          transparent={isXray}
+          opacity={isXray ? 0.45 : 1.0}
           wireframe={wireframe}
         />
       </mesh>
 
-      {/* Rocker Box & Valve Cover (Billet Aluminum) */}
-      <mesh position={[0, 1.7, 0]}>
-        <boxGeometry args={[0.5, 0.2, 0.5]} />
+      {/* Billet Aluminum Rocker Cover Box with Cylinder ID */}
+      <mesh position={[0, 1.76, 0]}>
+        <boxGeometry args={[0.54, 0.2, 0.54]} />
         <meshStandardMaterial
           color="#cbd5e1"
           metalness={0.85}
@@ -156,26 +218,56 @@ function PistonCylinder({
         />
       </mesh>
 
-      {/* Selection Holographic Halo Ring */}
-      {isSelected && (
-        <mesh position={[0, 1.45, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.75, 0.03, 16, 32]} />
-          <meshBasicMaterial color="#0284c7" />
-        </mesh>
-      )}
+      {/* Dual Pushrod Tubes (Chrome Steel Running from Base to Rocker Box) */}
+      <mesh position={[0.26, 0.85, 0.2]}>
+        <cylinderGeometry args={[0.035, 0.035, 1.45, 16]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.95} roughness={0.1} />
+      </mesh>
+      <mesh position={[-0.26, 0.85, 0.2]}>
+        <cylinderGeometry args={[0.035, 0.035, 1.45, 16]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.95} roughness={0.1} />
+      </mesh>
 
-      {/* Exhaust Runner Pipe */}
-      <mesh position={[0.4, 0.8, -0.2]} rotation={[0.4, 0.2, 0.8]}>
-        <cylinderGeometry args={[0.12, 0.12, 0.8, 16]} />
+      {/* Dual Aviation Spark Plugs with High-Tension Orange Leads */}
+      {/* Top Spark Plug */}
+      <mesh position={[0.28, 1.5, 0.32]} rotation={[0.4, 0, 0.5]}>
+        <cylinderGeometry args={[0.06, 0.06, 0.22, 16]} />
+        <meshStandardMaterial color="#ea580c" roughness={0.3} />
+      </mesh>
+      {/* Bottom Spark Plug */}
+      <mesh position={[-0.28, 1.5, -0.32]} rotation={[-0.4, 0, -0.5]}>
+        <cylinderGeometry args={[0.06, 0.06, 0.22, 16]} />
+        <meshStandardMaterial color="#ea580c" roughness={0.3} />
+      </mesh>
+
+      {/* Exhaust Runner Pipe (Tuned Stainless Steel Header) */}
+      <mesh position={[0.42, 0.85, -0.22]} rotation={[0.4, 0.2, 0.8]}>
+        <cylinderGeometry args={[0.12, 0.12, 0.85, 20]} />
         <meshStandardMaterial
-          color={isOverheating ? "#ea580c" : "#64748b"}
+          color={renderMode === "flir" ? getFlirThermalColor(egtC * 0.35) : (isOverheating ? "#ea580c" : "#475569")}
           emissive={isOverheating ? "#ea580c" : "#000000"}
-          emissiveIntensity={isOverheating ? 0.6 : 0.0}
+          emissiveIntensity={isOverheating ? 0.7 : 0.0}
           roughness={0.4}
           metalness={0.8}
           wireframe={wireframe}
         />
       </mesh>
+
+      {/* Chrome Intake Runner Manifold Tube */}
+      <mesh position={[-0.42, 0.85, 0.22]} rotation={[-0.4, -0.2, -0.8]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.8, 16]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.15} />
+      </mesh>
+
+      {/* Holographic Target Bracket when Selected */}
+      {isSelected && (
+        <group position={[0, 1.5, 0]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.82, 0.03, 16, 36]} />
+            <meshBasicMaterial color="#0284c7" />
+          </mesh>
+        </group>
+      )}
     </group>
   );
 }
@@ -193,6 +285,7 @@ function AeroPistonEngine({
 }) {
   const engineRef = useRef<THREE.Group>(null);
   const propRef = useRef<THREE.Group>(null);
+  const crankRef = useRef<THREE.Group>(null);
 
   // Cylinder groups for smooth exploded view interpolation
   const cyl1Ref = useRef<THREE.Group>(null);
@@ -204,8 +297,9 @@ function AeroPistonEngine({
   const altRef = useRef<THREE.Group>(null);
 
   const currentExploded = useRef(0);
-
   const rpm = livePacket?.rpm || config.rpm || 2400;
+  const renderMode: RenderMode = config.renderMode || "solid";
+  const isXray = renderMode === "xray";
 
   useFrame((_, delta) => {
     // Spin propeller smoothly at scaled operational speed
@@ -214,25 +308,31 @@ function AeroPistonEngine({
       propRef.current.rotation.z += radPerSec * delta;
     }
 
+    // Spin internal crankshaft in X-Ray mode
+    if (crankRef.current && isXray) {
+      const radPerSec = (rpm / 60) * Math.PI * 2 * 0.15;
+      crankRef.current.rotation.z += radPerSec * delta;
+    }
+
     // Smooth lerp for CAD Exploded View transition
     const targetExploded = config.explodedView ? 1.0 : 0.0;
     currentExploded.current = THREE.MathUtils.lerp(currentExploded.current, targetExploded, delta * 4.0);
     const exp = currentExploded.current;
 
     // Explode cylinders outward horizontally along boxer displacement axis
-    if (cyl1Ref.current) cyl1Ref.current.position.x = 1.35 + exp * 1.2;
-    if (cyl2Ref.current) cyl2Ref.current.position.x = -1.35 - exp * 1.2;
-    if (cyl3Ref.current) cyl3Ref.current.position.x = 1.35 + exp * 1.2;
-    if (cyl4Ref.current) cyl4Ref.current.position.x = -1.35 - exp * 1.2;
+    if (cyl1Ref.current) cyl1Ref.current.position.x = 1.35 + exp * 1.3;
+    if (cyl2Ref.current) cyl2Ref.current.position.x = -1.35 - exp * 1.3;
+    if (cyl3Ref.current) cyl3Ref.current.position.x = 1.35 + exp * 1.3;
+    if (cyl4Ref.current) cyl4Ref.current.position.x = -1.35 - exp * 1.3;
 
     // Explode propeller forward along thrust vector
-    if (propGroupRef.current) propGroupRef.current.position.z = 1.8 + exp * 1.0;
+    if (propGroupRef.current) propGroupRef.current.position.z = 1.85 + exp * 1.1;
 
     // Explode oil cooler downward
-    if (coolerRef.current) coolerRef.current.position.y = -1.1 - exp * 0.8;
+    if (coolerRef.current) coolerRef.current.position.y = -1.15 - exp * 0.9;
 
     // Explode alternator upward
-    if (altRef.current) altRef.current.position.y = 1.0 + exp * 0.8;
+    if (altRef.current) altRef.current.position.y = 1.05 + exp * 0.9;
   });
 
   const getCht = (cyl: number) => {
@@ -241,36 +341,56 @@ function AeroPistonEngine({
     return (livePacket.channels[key] as number) || 160;
   };
 
+  const getEgt = (cyl: number) => {
+    if (!livePacket) return 640;
+    const key = `E1_EGT${cyl}` as keyof typeof livePacket.channels;
+    return (livePacket.channels[key] as number) || 640;
+  };
+
   const isOilFault = livePacket?.stage2_fault === "oil_cooler_degradation";
   const isAltFault = livePacket?.stage2_fault === "alternator_rectifier_drift";
 
   return (
     <group ref={engineRef} position={[0, 0, 0]}>
-      {/* Central Engine Crankcase Block (Aircraft Cast Aluminum - Clean Metal) */}
+      {/* ─── 1. Horizontally-Opposed Boxer Crankcase ────────────────────────── */}
       <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[1.5, 1.2, 2.4]} />
+        <boxGeometry args={[1.55, 1.25, 2.45]} />
         <meshStandardMaterial
-          color="#64748b"
-          metalness={0.7}
-          roughness={0.35}
+          color={isXray ? "#94a3b8" : "#64748b"}
+          metalness={isXray ? 0.2 : 0.7}
+          roughness={isXray ? 0.1 : 0.35}
+          transparent={isXray}
+          opacity={isXray ? 0.3 : 1.0}
           wireframe={config.wireframe}
         />
       </mesh>
 
-      {/* Crankcase Top Stiffening Ribs */}
-      <mesh position={[0, 0.62, 0]}>
-        <boxGeometry args={[1.3, 0.08, 2.2]} />
-        <meshStandardMaterial
-          color="#475569"
-          metalness={0.8}
-          roughness={0.3}
-          wireframe={config.wireframe}
-        />
+      {/* Internal Rotating Steel Crankshaft (Visible in X-Ray Mode) */}
+      {isXray && (
+        <group ref={crankRef} position={[0, 0, 0]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.15, 0.15, 2.3, 20]} />
+            <meshStandardMaterial color="#cbd5e1" metalness={0.95} roughness={0.1} />
+          </mesh>
+          {/* Crankshaft Counterweights */}
+          {[-0.6, 0.0, 0.6].map((z, i) => (
+            <mesh key={i} position={[0, 0.25, z]}>
+              <boxGeometry args={[0.4, 0.25, 0.15]} />
+              <meshStandardMaterial color="#f59e0b" metalness={0.8} roughness={0.25} />
+            </mesh>
+          ))}
+        </group>
+      )}
+
+      {/* Centerline Seam Split Flange with Hex Bolt Pattern */}
+      <mesh position={[0, 0.64, 0]}>
+        <boxGeometry args={[1.4, 0.08, 2.3]} />
+        <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.25} />
       </mesh>
 
       {/* Sump Pan (Oil Reservoir) */}
-      <mesh position={[0, -0.75, 0]}>
-        <boxGeometry args={[1.2, 0.4, 2.0]} />
+      <mesh position={[0, -0.78, 0]}>
+        <boxGeometry args={[1.25, 0.42, 2.1]} />
         <meshStandardMaterial
           color="#334155"
           metalness={0.75}
@@ -279,6 +399,13 @@ function AeroPistonEngine({
         />
       </mesh>
 
+      {/* Front Reduction Gearbox Nose Housing */}
+      <mesh position={[0, 0, 1.4]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.52, 0.68, 0.5, 32]} />
+        <meshStandardMaterial color="#64748b" metalness={0.8} roughness={0.3} />
+      </mesh>
+
+      {/* ─── 2. 4 Precision Cylinders ────────────────────────────────────────── */}
       {/* Cyl 1 (Right Front) */}
       <PistonCylinder
         id={1}
@@ -286,8 +413,11 @@ function AeroPistonEngine({
         position={[1.35, 0.1, 0.6]}
         rotation={[0, 0, -Math.PI / 2]}
         tempC={getCht(1)}
+        egtC={getEgt(1)}
         isSelected={config.selectedCylinder === 1}
         wireframe={config.wireframe}
+        renderMode={renderMode}
+        engineRpm={rpm}
         onSelect={onSelectCylinder}
       />
 
@@ -298,8 +428,11 @@ function AeroPistonEngine({
         position={[-1.35, 0.1, 0.6]}
         rotation={[0, 0, Math.PI / 2]}
         tempC={getCht(2)}
+        egtC={getEgt(2)}
         isSelected={config.selectedCylinder === 2}
         wireframe={config.wireframe}
+        renderMode={renderMode}
+        engineRpm={rpm}
         onSelect={onSelectCylinder}
       />
 
@@ -310,8 +443,11 @@ function AeroPistonEngine({
         position={[1.35, 0.1, -0.6]}
         rotation={[0, 0, -Math.PI / 2]}
         tempC={getCht(3)}
+        egtC={getEgt(3)}
         isSelected={config.selectedCylinder === 3}
         wireframe={config.wireframe}
+        renderMode={renderMode}
+        engineRpm={rpm}
         onSelect={onSelectCylinder}
       />
 
@@ -322,60 +458,64 @@ function AeroPistonEngine({
         position={[-1.35, 0.1, -0.6]}
         rotation={[0, 0, Math.PI / 2]}
         tempC={getCht(4)}
+        egtC={getEgt(4)}
         isSelected={config.selectedCylinder === 4}
         wireframe={config.wireframe}
+        renderMode={renderMode}
+        engineRpm={rpm}
         onSelect={onSelectCylinder}
       />
 
-      {/* Propeller Drive Assembly */}
-      <group ref={propGroupRef} position={[0, 0, 1.8]}>
-        {/* Polished Propeller Spinner Dome */}
+      {/* ─── 3. Propeller & Spinner Drive Assembly ───────────────────────────── */}
+      <group ref={propGroupRef} position={[0, 0, 1.85]}>
+        {/* Mirror-Chrome Aerodynamic Spinner Nose Cone */}
         <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <coneGeometry args={[0.4, 0.7, 32]} />
+          <coneGeometry args={[0.42, 0.75, 36]} />
           <meshStandardMaterial
-            color="#e2e8f0"
-            metalness={0.9}
-            roughness={0.15}
+            color="#f8fafc"
+            metalness={0.96}
+            roughness={0.06}
             wireframe={config.wireframe}
           />
         </mesh>
 
-        {/* Propeller Shaft Collar */}
-        <mesh position={[0, 0, -0.2]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.3, 0.3, 0.25, 24]} />
-          <meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.2} />
+        {/* Propeller Hub Flange with 6 Hex Fastener Studs */}
+        <mesh position={[0, 0, -0.22]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.34, 0.34, 0.28, 24]} />
+          <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.15} />
         </mesh>
 
-        {/* Rotating Composite Propeller Blades */}
-        <group ref={propRef} position={[0, 0, -0.05]}>
+        {/* Rotating Carbon-Fiber Propeller Blades */}
+        <group ref={propRef} position={[0, 0, -0.06]}>
           {/* Blade 1 */}
-          <mesh position={[0, 1.4, 0]} rotation={[0, 0.2, 0]}>
-            <boxGeometry args={[0.22, 2.4, 0.05]} />
-            <meshStandardMaterial color="#0f172a" roughness={0.3} metalness={0.5} />
+          <mesh position={[0, 1.45, 0]} rotation={[0, 0.25, 0]}>
+            <boxGeometry args={[0.24, 2.5, 0.05]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.2} metalness={0.4} />
           </mesh>
           {/* Blade 1 High-Vis Safety Tip */}
-          <mesh position={[0, 2.45, 0]}>
-            <boxGeometry args={[0.22, 0.3, 0.05]} />
+          <mesh position={[0, 2.55, 0]}>
+            <boxGeometry args={[0.24, 0.32, 0.05]} />
             <meshStandardMaterial color="#ea580c" roughness={0.3} />
           </mesh>
 
           {/* Blade 2 */}
-          <mesh position={[0, -1.4, 0]} rotation={[0, -0.2, 0]}>
-            <boxGeometry args={[0.22, 2.4, 0.05]} />
-            <meshStandardMaterial color="#0f172a" roughness={0.3} metalness={0.5} />
+          <mesh position={[0, -1.45, 0]} rotation={[0, -0.25, 0]}>
+            <boxGeometry args={[0.24, 2.5, 0.05]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.2} metalness={0.4} />
           </mesh>
           {/* Blade 2 High-Vis Safety Tip */}
-          <mesh position={[0, -2.45, 0]}>
-            <boxGeometry args={[0.22, 0.3, 0.05]} />
+          <mesh position={[0, -2.55, 0]}>
+            <boxGeometry args={[0.24, 0.32, 0.05]} />
             <meshStandardMaterial color="#ea580c" roughness={0.3} />
           </mesh>
         </group>
       </group>
 
-      {/* Oil Cooler Heat Exchanger Core (Bottom Mount) */}
-      <group ref={coolerRef} position={[0, -1.1, 0.4]}>
+      {/* ─── 4. Ancillaries: Oil Cooler, Alternator, Filter ─────────────────── */}
+      {/* Oil Cooler Heat Exchanger Core (Bottom Mount with AN-8 Braided Lines) */}
+      <group ref={coolerRef} position={[0, -1.15, 0.4]}>
         <mesh>
-          <boxGeometry args={[1.0, 0.3, 0.7]} />
+          <boxGeometry args={[1.05, 0.32, 0.75]} />
           <meshStandardMaterial
             color={isOilFault ? "#dc2626" : "#475569"}
             emissive={isOilFault ? "#dc2626" : "#000000"}
@@ -385,22 +525,48 @@ function AeroPistonEngine({
             wireframe={config.wireframe}
           />
         </mesh>
+        {/* Braided Oil Feed Lines with Anodized Fittings */}
+        <mesh position={[0.42, 0.18, 0]} rotation={[0, 0, 0.5]}>
+          <cylinderGeometry args={[0.04, 0.04, 0.35, 16]} />
+          <meshStandardMaterial color="#0284c7" metalness={0.9} roughness={0.2} />
+        </mesh>
+        <mesh position={[-0.42, 0.18, 0]} rotation={[0, 0, -0.5]}>
+          <cylinderGeometry args={[0.04, 0.04, 0.35, 16]} />
+          <meshStandardMaterial color="#dc2626" metalness={0.9} roughness={0.2} />
+        </mesh>
       </group>
 
-      {/* 28V Alternator Generator Unit (Top Front Mount) */}
-      <group ref={altRef} position={[0, 0.95, 0.6]}>
+      {/* Spin-On White Aeronautical Oil Filter Canister */}
+      <mesh position={[0.72, -0.55, -0.5]} rotation={[0, 0, -Math.PI / 3]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.45, 24]} />
+        <meshStandardMaterial color="#f8fafc" metalness={0.5} roughness={0.2} />
+      </mesh>
+
+      {/* 28V Dual Alternator Generator Unit (Top Front Mount) */}
+      <group ref={altRef} position={[0, 1.0, 0.6]}>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.3, 0.3, 0.5, 24]} />
+          <cylinderGeometry args={[0.32, 0.32, 0.55, 24]} />
           <meshStandardMaterial
             color={isAltFault ? "#d97706" : "#64748b"}
             emissive={isAltFault ? "#d97706" : "#000000"}
-            emissiveIntensity={isAltFault ? 0.75 : 0.0}
+            emissiveIntensity={isAltFault ? 0.8 : 0.0}
             metalness={0.85}
             roughness={0.25}
             wireframe={config.wireframe}
           />
         </mesh>
       </group>
+
+      {/* Atmospheric Exhaust Heat Shimmer Sparkles */}
+      <Sparkles
+        count={25}
+        scale={[1.8, 1.2, 2.5]}
+        position={[0, -0.4, -0.8]}
+        speed={0.8}
+        color="#f97316"
+        size={2.5}
+        opacity={0.6}
+      />
     </group>
   );
 }
@@ -429,37 +595,37 @@ export function Scene3D({
         <color attach="background" args={["#f1f5f9"]} />
         <fog attach="fog" args={["#f1f5f9", 14, 35]} />
 
-        {/* HDRI Studio Lighting Reflection Map - Eliminates Pitch Black Void */}
+        {/* HDRI Studio Lighting Reflection Map */}
         <Environment preset="city" />
 
         {/* Studio Lighting Rig */}
-        <ambientLight intensity={0.85} />
-        <directionalLight position={[10, 15, 12]} intensity={2.0} color="#ffffff" />
-        <directionalLight position={[-8, 6, -6]} intensity={0.9} color="#bae6fd" />
+        <ambientLight intensity={0.9} />
+        <directionalLight position={[10, 16, 12]} intensity={2.2} color="#ffffff" />
+        <directionalLight position={[-8, 6, -6]} intensity={0.95} color="#bae6fd" />
         <pointLight position={[0, 4, 3]} intensity={0.8} color={activePalette.secondary} />
         <pointLight position={[0, -2, -4]} intensity={0.5} color={activePalette.primary} />
 
-        {/* Test Cell Ground Bench Grid */}
+        {/* Precision Test Cell Floor Grid */}
         <gridHelper args={[24, 24, "#94a3b8", "#cbd5e1"]} position={[0, -1.8, 0]} />
 
         {/* Ground Contact Shadows */}
         <ContactShadows
           position={[0, -1.79, 0]}
-          opacity={0.65}
-          scale={20}
-          blur={2.0}
-          far={4.5}
+          opacity={0.7}
+          scale={22}
+          blur={2.5}
+          far={5.0}
           color="#0f172a"
         />
 
-        {/* 4-Cylinder Aero Engine Digital Twin (Rigidly Bolted) */}
+        {/* 4-Cylinder Aero Piston Engine Digital Twin */}
         <AeroPistonEngine
           config={config}
           livePacket={livePacket}
           onSelectCylinder={onSelectCylinder}
         />
 
-        {/* Smooth Orbit Camera Controls */}
+        {/* Orbit Camera Controls */}
         <OrbitControls
           enableDamping
           dampingFactor={0.05}

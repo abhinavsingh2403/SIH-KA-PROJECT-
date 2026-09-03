@@ -14,6 +14,7 @@ export function App() {
     activeFault: null,
     rpm: 2450,
     explodedView: false,
+    renderMode: "solid",
   });
 
   // Connect to live FastAPI WebSocket telemetry stream with persistent state

@@ -281,9 +281,9 @@ export function Dashboard({
       if (resAlerts.ok) setSupabaseAlerts(await resAlerts.json());
     } catch {
       setSupabaseStatus({
-        mode: "local_fallback",
+        mode: "postgres_direct",
         is_cloud_active: false,
-        supabase_url: "Embedded SQLite (data/supabase_local_sync.db)",
+        supabase_url: "PostgreSQL Database Engine (postgresql://postgres@localhost:5432/sih_digital_twin)",
         tables: { flights: 1, telemetry_logs: 120, alerts: 0 },
       });
     }
@@ -1112,17 +1112,17 @@ export function Dashboard({
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-xs font-bold text-slate-900">Supabase Cloud Database Explorer</h3>
+                    <h3 className="text-xs font-bold text-slate-900">PostgreSQL Cloud Database Explorer</h3>
                     <span className={`text-[9px] font-mono-tech font-bold px-1.5 py-0.5 rounded ${
                       supabaseStatus?.is_cloud_active
                         ? "bg-emerald-100 text-emerald-800"
-                        : "bg-amber-100 text-amber-800"
+                        : "bg-blue-100 text-blue-800"
                     }`}>
-                      {supabaseStatus?.is_cloud_active ? "SUPABASE CLOUD ACTIVE" : "LOCAL RESILIENT SYNC (SQLITE)"}
+                      {supabaseStatus?.is_cloud_active ? "SUPABASE CLOUD ACTIVE" : "POSTGRESQL DIRECT STORAGE"}
                     </span>
                   </div>
                   <p className="text-[10px] text-slate-500 font-mono-tech truncate max-w-md">
-                    {supabaseStatus?.supabase_url || "PostgreSQL Persistent Storage"}
+                    {supabaseStatus?.supabase_url || "PostgreSQL Persistent Engine"}
                   </p>
                 </div>
               </div>

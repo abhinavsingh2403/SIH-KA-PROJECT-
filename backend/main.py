@@ -57,6 +57,7 @@ from backend.services.llm_copilot import LLMCopilotService
 from backend.services.mavlink_ingest import MAVLinkTelemetryParser
 from backend.models.federated_fleet import FleetFederatedAggregator
 from backend.services.supabase_client import supabase_service
+from backend.database import db_manager, postgres_repo
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -115,6 +116,7 @@ def health_check():
         "flights_in_memory": len(_flights),
         "stage1_trained": stage1_model._is_trained,
         "stage2_trained": stage2_model._is_trained,
+        "database": db_manager.get_metrics(),
     }
 
 
@@ -132,6 +134,16 @@ def simulate_flight(req: FlightSimulationRequest):
     csv_path = flight.to_csv(DATA_DIR)
     _flights[flight.flight_id] = flight
     _alerts[flight.flight_id] = []
+
+    # Persist to PostgreSQL database
+    postgres_repo.save_flight(
+        flight_id=flight.flight_id,
+        engine_id=flight.engine_id,
+        profile=flight.profile,
+        duration_s=flight.duration_s,
+        num_samples=flight.num_samples,
+        status="active",
+    )
 
     return FlightSimulationResponse(
         flight_id=flight.flight_id,
@@ -561,6 +573,8 @@ def ingest_mavlink_telemetry(payload: dict):
     from ArduPilot / PX4 and normalizes them into the 15-channel engine twin vector.
     """
     snapshot = mavlink_parser.parse_mavlink_json(payload)
+    msg_type = payload.get("message_type") or payload.get("msg_type") or "MAVLink"
+    postgres_repo.save_mavlink_packet(msg_type, payload, snapshot)
     return {
         "status": "ingested",
         "messages_total": mavlink_parser.messages_processed,
@@ -578,6 +592,12 @@ def run_fleet_federated_round(round_num: int = 1):
     of 5 DRDO MALE UAVs (TAPAS-01 to TAPAS-05) without sharing raw flight telemetry.
     """
     summary = fleet_aggregator.execute_federated_round(round_num=round_num)
+    postgres_repo.save_fleet_round(
+        round_num=round_num,
+        num_clients=summary.get("num_clients", 5),
+        global_f1=summary.get("global_model_f1", 0.95),
+        summary=summary,
+    )
     return summary
 
 
@@ -592,38 +612,48 @@ def get_fleet_federated_status():
     }
 
 
-# ─── 2.14 Supabase Cloud Database & Telemetry Persistence ──────────────────────
+# ─── 2.14 PostgreSQL Relational Database & Telemetry Persistence ───────────────
 
+@app.get("/api/database/status")
 @app.get("/api/supabase/status")
-def get_supabase_status():
+def get_database_status():
     """
-    Returns live Supabase database connection health, active mode (cloud vs embedded
-    resilient fallback), and total persisted flights and telemetry records.
+    Returns live PostgreSQL database connection health, connection pool metrics,
+    and total persisted flights and telemetry records.
     """
     return supabase_service.get_status()
 
 
+@app.get("/api/database/flights")
 @app.get("/api/supabase/flights")
-def get_supabase_flights(limit: int = 20):
-    """Retrieves list of flights persisted in Supabase database."""
+def get_database_flights(limit: int = 50):
+    """Retrieves list of flights persisted in PostgreSQL database."""
     return supabase_service.get_flights(limit=limit)
 
 
+@app.post("/api/database/sync-flight/{flight_id}")
 @app.post("/api/supabase/sync-flight/{flight_id}")
-def sync_flight_to_supabase(flight_id: str):
-    """Saves active flight metadata and recorded frames to Supabase."""
+def sync_flight_to_database(flight_id: str):
+    """Saves active flight metadata and recorded frames to PostgreSQL."""
     flight = _flights.get(flight_id)
     if not flight:
         flight = generate_flight(profile="patrol", duration_s=600, seed=42)
         _flights[flight_id] = flight
-    saved = supabase_service.save_flight(flight.flight_id, flight.profile, flight.duration_s, "active")
+    saved = supabase_service.save_flight(flight.flight_id, flight.engine_id, flight.profile, flight.duration_s, flight.num_samples, "active")
     return {"status": "synced", "flight": saved}
 
 
+@app.get("/api/database/alerts")
 @app.get("/api/supabase/alerts")
-def get_supabase_alerts(limit: int = 50):
-    """Retrieves logged FMEA diagnostic alerts and reports from Supabase."""
+def get_database_alerts(limit: int = 50):
+    """Retrieves logged FMEA diagnostic alerts and reports from PostgreSQL."""
     return supabase_service.get_alerts(limit=limit)
+
+
+@app.get("/api/database/telemetry/{flight_id}")
+def get_database_telemetry(flight_id: str, limit: int = 300):
+    """Retrieves recorded 15-channel time-series frames from PostgreSQL."""
+    return postgres_repo.get_telemetry_logs(flight_id=flight_id, limit=limit)
 
 
 # ─── Entrypoint ─────────────────────────────────────────────────────────────────

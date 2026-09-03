@@ -110,12 +110,12 @@ Unlike generic IoT dashboards or conversational AI demos, this system enforces *
   - **`Print Official Report`** button (browser print/PDF formatting).
   - **`Download Telemetry CSV`** button (1-click time-series export).
 
-### Supabase Cloud Database & Resilient Offline Sync
-- PostgreSQL schema ([`backend/supabase_schema.sql`](backend/supabase_schema.sql)) with tables for `flights`, `telemetry_logs`, `alerts`, and `fleet_rounds`.
-- Dual-mode client ([`backend/services/supabase_client.py`](backend/services/supabase_client.py)):
-  - Connects to remote Supabase via `create_client` when `SUPABASE_URL` and `SUPABASE_KEY` are present in `.env`.
-  - Automatically falls back to embedded SQLite (`data/supabase_local_sync.db`) when offline, ensuring 100% test and offline demo reliability.
-- In-dashboard **`[SUPABASE DB]`** modal for real-time table metrics and manual flight synchronization.
+### PostgreSQL Relational Storage & Supabase Cloud Sync
+- PostgreSQL schema ([`backend/postgres_schema.sql`](backend/postgres_schema.sql) & [`backend/supabase_schema.sql`](backend/supabase_schema.sql)) with tables for `flights`, `telemetry_logs`, `alerts`, `operator_feedback`, `fleet_rounds`, and `mavlink_logs`.
+- High-performance PostgreSQL persistence architecture ([`backend/database/`](backend/database/) & [`backend/services/supabase_client.py`](backend/services/supabase_client.py)):
+  - SQLAlchemy 2.0 connection pooling (`QueuePool`), transaction safety, automated migrations, and PostgreSQL driver (`psycopg3`/`asyncpg`).
+  - Supports direct PostgreSQL (`DATABASE_URL=postgresql://...`), AWS RDS, TimescaleDB, or Supabase pooler connections with resilient fallback for offline CI/test environments.
+- In-dashboard **`[POSTGRES DB]`** modal for real-time table metrics, connection pool stats, and manual flight synchronization.
 
 ### Grounded Tactical AI Copilot (Zero AI Slop)
 - Rewritten with pure aeronautical domain logic ([`backend/services/llm_copilot.py`](backend/services/llm_copilot.py)):
@@ -149,8 +149,8 @@ To ensure this project remains **competition-winning, technically credible, and 
    - Never allow LLM outputs to generate freeform medical or automotive advice for an aircraft. All copilot responses must parse real channel values (`livePacket.channels`), compare them against certified thresholds (`backend/config.py`), and issue standardized aerospace directives (RTB, Power Derate, Mixture Full Rich, Load Shed).
 2. **Deterministic Threshold Rules Before Probabilistic Decisions**:
    - Keep the two-stage cascade intact. The edge detector must act as a high-recall filter; the classifier must only execute when an anomaly is present. Never replace physics-informed lag filters ($\tau_{\text{CHT}} = 30\text{s}$, $\tau_{\text{Oil}} = 120\text{s}$) with raw unconstrained neural networks.
-3. **Resilient Local Fallback Pattern**:
-   - Always maintain the dual-mode pattern established in `SupabaseService` and `useTelemetrySocket.ts`. In offline evaluation environments (such as hackathon judging venues without reliable internet), the system must seamlessly run against local SQLite and mock physical loops without throwing unhandled exceptions.
+3. **Resilient Local & Cloud PostgreSQL Persistence Pattern**:
+   - Always maintain the dual-mode pattern established in `SupabaseService` and `useTelemetrySocket.ts`. In offline evaluation environments (such as hackathon judging venues without reliable internet), the system must seamlessly run against local or containerized PostgreSQL / embedded resilient engines and mock physical loops without throwing unhandled exceptions.
 4. **Authentic Mechanical Proportions**:
    - When extending 3D CAD assets, preserve mechanical accuracy: horizontally-opposed cylinders must remain staggered along the Z-axis, cooling fins must bevel, and propeller aerofoil pitch must reflect genuine aeronautical angle-of-attack geometry.
 5. **Traceable DRDO Documentation**:

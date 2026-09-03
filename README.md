@@ -102,13 +102,13 @@ $$\text{Sensor Telemetry} \longrightarrow \text{Edge Anomaly (Stage 1)} \longrig
 
 ## 3. What Has To Be Done (Future Roadmap)
 
-| Priority | Feature / Phase | Description |
-|---|---|---|
-| **Phase 1** | **Live WebSocket Telemetry Streaming** | Connect the React 3D twin directly to FastAPI via WebSocket (`/api/ws/telemetry`) for streaming live and replay telemetry at 10 Hz without polling. |
-| **Phase 2** | **MAVLink / GCS Protocol Ingestion** | Add a MAVLink parser to accept real ArduPilot/PX4 or SITL telemetry feeds into the Digital Twin. |
-| **Phase 3** | **Active Retraining on Feedback** | Wire the operator feedback loop (`/api/feedback`) to trigger automated fine-tuning runs when false alarms or missed faults exceed 5%. |
-| **Phase 4** | **Federated Learning Fleet Framing** | Intersperse edge-model weight delta aggregation across multiple UAV squadrons to enable collective intelligence without sharing classified flight telemetry. |
-| **Phase 5** | **Exploded View CAD Animation** | Add an interactive "Exploded View" slider in the 3D twin to disassemble the engine into crankshaft, connecting rods, pistons, and valves during maintenance reviews. |
+| Priority | Feature / Phase | Status | Description |
+|---|---|---|---|
+| **Phase 1** | **Live WebSocket Telemetry Streaming** | ✅ **COMPLETE** | Bi-directional streaming WebSocket at `/api/ws/telemetry/{flight_id}` streaming 15-channel packets, live RPM, alerts, and accepting control commands (play/pause/1x-20x/seek/fault injection). |
+| **Phase 2** | **Exploded CAD View Animation** | ✅ **COMPLETE** | Interactive 3D spatial separation mode in `Scene3D.tsx` smoothly disassembling the 4 cylinders, propeller assembly, oil cooler, and alternator. |
+| **Phase 3** | **MAVLink / GCS Protocol Ingestion** | ⏳ *Planned* | Add a MAVLink message parser to accept real ArduPilot/PX4 or SITL telemetry feeds into the Digital Twin. |
+| **Phase 4** | **Active Retraining on Feedback** | ⏳ *Planned* | Wire the operator feedback loop (`/api/feedback`) to trigger automated fine-tuning runs when false alarms or missed faults exceed 5%. |
+| **Phase 5** | **Federated Learning Fleet Framing** | ⏳ *Planned* | Intersperse edge-model weight delta aggregation across multiple UAV squadrons to enable collective intelligence without sharing classified flight telemetry. |
 
 ---
 

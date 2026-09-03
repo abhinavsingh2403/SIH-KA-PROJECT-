@@ -1,110 +1,108 @@
 {
   "communities": {
     "0": [
-      "backend_main",
-      "backend_main_copilot_chat",
-      "backend_main_generate_report_endpoint",
-      "backend_main_get_accuracy_trend",
-      "backend_main_get_alerts",
-      "backend_main_get_mission_risk",
-      "backend_main_get_residuals",
-      "backend_main_health_check",
-      "backend_main_inject_fault_endpoint",
-      "backend_main_rationale_1",
-      "backend_main_replay_flight",
-      "backend_main_simulate_flight",
-      "backend_main_stage1_check",
-      "backend_main_stage2_classify",
-      "backend_main_submit_feedback",
-      "backend_main_what_if_endpoint",
-      "backend_models_features_extract_window_features",
-      "backend_models_features_rationale_47",
-      "backend_schemas",
-      "backend_schemas_accuracytrendpoint",
-      "backend_schemas_copilotchatrequest",
-      "backend_schemas_copilotchatresponse",
-      "backend_schemas_faultinjectionrequest",
-      "backend_schemas_faultinjectionresponse",
-      "backend_schemas_faulttype",
-      "backend_schemas_feedbackrequest",
-      "backend_schemas_feedbackverdict",
-      "backend_schemas_flightprofile",
-      "backend_schemas_flightsimulationrequest",
-      "backend_schemas_flightsimulationresponse",
-      "backend_schemas_rationale_1",
-      "backend_schemas_rationale_191",
-      "backend_schemas_replayevent",
-      "backend_schemas_reportgeneraterequest",
-      "backend_schemas_reportgenerateresponse",
-      "backend_schemas_residualpoint",
-      "backend_schemas_residualsresponse",
-      "backend_schemas_sensorreading",
-      "backend_schemas_stage1checkrequest",
-      "backend_schemas_stage1checkresponse",
-      "backend_schemas_stage2classifyresponse",
-      "backend_schemas_whatifrequest",
-      "basemodel",
-      "enum",
-      "faultinjectionrequest",
-      "flightsimulationrequest",
-      "get",
-      "post",
-      "str"
-    ],
-    "1": [
       "backend_config",
       "backend_config_rationale_1",
+      "backend_models_features",
+      "backend_models_features_extract_window_features",
+      "backend_models_features_py_ndarray",
+      "backend_models_features_rationale_1",
+      "backend_models_features_rationale_18",
+      "backend_models_features_rationale_34",
+      "backend_models_features_rationale_47",
+      "backend_models_features_slope",
+      "backend_models_features_spectral_entropy",
+      "backend_models_stage1_detector",
+      "backend_models_stage1_detector_py_ndarray",
+      "backend_models_stage1_detector_py_path",
+      "backend_models_stage1_detector_rationale_1",
+      "backend_models_stage1_detector_rationale_101",
+      "backend_models_stage1_detector_rationale_114",
+      "backend_models_stage1_detector_rationale_126",
+      "backend_models_stage1_detector_rationale_140",
+      "backend_models_stage1_detector_rationale_31",
+      "backend_models_stage1_detector_rationale_40",
+      "backend_models_stage1_detector_stage1detector",
+      "backend_models_stage1_detector_stage1detector_init",
+      "backend_models_stage1_detector_stage1detector_load",
+      "backend_models_stage1_detector_stage1detector_load_csv",
+      "backend_models_stage1_detector_stage1detector_predict",
+      "backend_models_stage1_detector_stage1detector_save",
+      "backend_models_stage1_detector_stage1detector_train",
+      "backend_models_stage2_classifier",
+      "backend_models_stage2_classifier_rationale_1",
+      "backend_scripts_generate_dataset",
+      "backend_scripts_generate_dataset_extract_all_windows",
+      "backend_scripts_generate_dataset_generate_dataset",
+      "backend_scripts_generate_dataset_py_ndarray",
+      "backend_scripts_generate_dataset_rationale_1",
+      "backend_scripts_generate_dataset_rationale_119",
+      "backend_scripts_generate_dataset_rationale_36",
+      "backend_scripts_train_pipeline",
+      "backend_scripts_train_pipeline_main",
+      "backend_scripts_train_pipeline_rationale_1",
       "backend_simulator_engine_simulator",
-      "backend_simulator_engine_simulator_flightdata",
-      "backend_simulator_engine_simulator_flightdata_num_channels",
-      "backend_simulator_engine_simulator_flightdata_num_samples",
-      "backend_simulator_engine_simulator_flightdata_to_csv",
-      "backend_simulator_engine_simulator_generate_flight",
       "backend_simulator_engine_simulator_interpolate_throttle",
-      "backend_simulator_engine_simulator_py_path",
       "backend_simulator_engine_simulator_rationale_1",
-      "backend_simulator_engine_simulator_rationale_36",
-      "backend_simulator_engine_simulator_rationale_54",
       "backend_simulator_engine_simulator_rationale_73",
-      "backend_simulator_engine_simulator_rationale_94",
       "backend_simulator_fault_injector",
+      "backend_simulator_fault_injector_inject_fault",
+      "backend_simulator_fault_injector_py_ndarray",
       "backend_simulator_fault_injector_rationale_1",
-      "backend_tests_test_simulator",
-      "backend_tests_test_simulator_climb_flight",
-      "backend_tests_test_simulator_cruise_flight",
-      "backend_tests_test_simulator_patrol_flight",
-      "backend_tests_test_simulator_py_fixture",
-      "backend_tests_test_simulator_rationale_1",
-      "backend_tests_test_simulator_rationale_67",
-      "backend_tests_test_simulator_testchannelcompleteness",
-      "backend_tests_test_simulator_testchannelcompleteness_test_all_15_channels_present",
-      "backend_tests_test_simulator_testchannelcompleteness_test_channel_dimensions",
-      "backend_tests_test_simulator_testchannelcompleteness_test_timestamps_monotonic",
-      "backend_tests_test_simulator_testcsvexport",
-      "backend_tests_test_simulator_testcsvexport_test_csv_roundtrip",
-      "backend_tests_test_simulator_testflightprofiles",
-      "backend_tests_test_simulator_testflightprofiles_test_climb_has_higher_rpm_than_patrol",
-      "backend_tests_test_simulator_testnominalbands",
-      "backend_tests_test_simulator_testnominalbands_test_channels_within_bounds",
-      "backend_tests_test_twin_and_services_testdigitaltwinresidualengine",
-      "backend_tests_test_twin_and_services_testdigitaltwinresidualengine_test_clean_flight_low_residuals",
-      "backend_tests_test_twin_and_services_testdigitaltwinresidualengine_test_faulted_flight_elevated_residuals",
+      "backend_simulator_fault_injector_rationale_35",
+      "backend_simulator_fault_injector_rationale_52",
+      "backend_simulator_fault_injector_sigmoid_ramp",
       "backend_twin_residual_engine",
-      "backend_twin_residual_engine_digitaltwinresidualengine",
-      "backend_twin_residual_engine_digitaltwinresidualengine_compute_expected_curves",
-      "backend_twin_residual_engine_digitaltwinresidualengine_compute_residuals",
-      "backend_twin_residual_engine_digitaltwinresidualengine_init",
-      "backend_twin_residual_engine_py_ndarray",
-      "backend_twin_residual_engine_rationale_1",
-      "backend_twin_residual_engine_rationale_103",
-      "backend_twin_residual_engine_rationale_22",
-      "backend_twin_residual_engine_rationale_28"
+      "backend_twin_residual_engine_rationale_1"
+    ],
+    "1": [
+      "ref_react",
+      "src_app",
+      "src_app_app",
+      "src_components_overlayhud",
+      "src_components_overlayhud_overlayhud",
+      "src_components_overlayhud_overlayhudprops",
+      "src_components_scene3d",
+      "src_components_scene3d_aeropistonengine",
+      "src_components_scene3d_cylinderprops",
+      "src_components_scene3d_palettes",
+      "src_components_scene3d_particleswarm",
+      "src_components_scene3d_pistoncylinder",
+      "src_components_scene3d_scene3d",
+      "src_components_scene3d_sceneconfig",
+      "src_lib_motion",
+      "src_lib_motion_fadeinup",
+      "src_lib_motion_scalein",
+      "src_lib_motion_slideinright",
+      "src_lib_motion_staggercontainer",
+      "src_lib_usetelemetrysocket",
+      "src_lib_usetelemetrysocket_round",
+      "src_lib_usetelemetrysocket_usetelemetrysocket",
+      "src_main",
+      "src_types_telemetry",
+      "src_types_telemetry_alertitem",
+      "src_types_telemetry_alertseverity",
+      "src_types_telemetry_faultinjectionrequest",
+      "src_types_telemetry_faultinjectionresponse",
+      "src_types_telemetry_faulttype",
+      "src_types_telemetry_feedbackverdict",
+      "src_types_telemetry_flightprofile",
+      "src_types_telemetry_flightsimulationrequest",
+      "src_types_telemetry_flightsimulationresponse",
+      "src_types_telemetry_livetelemetrypacket",
+      "src_types_telemetry_missionriskresponse",
+      "src_types_telemetry_replayevent",
+      "src_types_telemetry_sensor_channels",
+      "src_types_telemetry_sensorchannel",
+      "src_types_telemetry_sensorreading",
+      "src_types_telemetry_stage1checkresponse",
+      "src_types_telemetry_stage2classifyresponse",
+      "src_types_telemetry_thermal_ranges",
+      "src_types_telemetry_thermalintensity"
     ],
     "2": [
       "backend_schemas_alertitem",
       "backend_schemas_alertseverity",
-      "backend_schemas_missionriskresponse",
-      "backend_schemas_whatifresponse",
       "backend_services_alerting",
       "backend_services_alerting_decisionalertingengine",
       "backend_services_alerting_decisionalertingengine_evaluate_alert",
@@ -122,16 +120,12 @@
       "backend_services_llm_copilot_rationale_15",
       "backend_services_llm_copilot_rationale_18",
       "backend_services_llm_copilot_rationale_70",
-      "backend_services_mission_risk",
       "backend_services_mission_risk_missionriskscorer",
       "backend_services_mission_risk_missionriskscorer_init",
       "backend_services_mission_risk_missionriskscorer_score_flight",
-      "backend_services_mission_risk_missionriskscorer_what_if_analysis",
       "backend_services_mission_risk_py_alertitem",
-      "backend_services_mission_risk_rationale_1",
       "backend_services_mission_risk_rationale_29",
       "backend_services_mission_risk_rationale_40",
-      "backend_services_mission_risk_rationale_77",
       "backend_tests_test_twin_and_services",
       "backend_tests_test_twin_and_services_clean_flight",
       "backend_tests_test_twin_and_services_faulted_flight",
@@ -188,32 +182,106 @@
       "vitejs_plugin_react"
     ],
     "4": [
-      "backend_scripts_generate_dataset",
-      "backend_scripts_generate_dataset_extract_all_windows",
-      "backend_scripts_generate_dataset_generate_dataset",
-      "backend_scripts_generate_dataset_py_ndarray",
-      "backend_scripts_generate_dataset_rationale_1",
-      "backend_scripts_generate_dataset_rationale_119",
-      "backend_scripts_generate_dataset_rationale_36",
-      "backend_scripts_train_pipeline",
-      "backend_scripts_train_pipeline_main",
-      "backend_scripts_train_pipeline_rationale_1",
-      "backend_simulator_fault_injector_inject_fault",
-      "backend_simulator_fault_injector_py_ndarray",
-      "backend_simulator_fault_injector_rationale_35",
-      "backend_simulator_fault_injector_rationale_52",
-      "backend_simulator_fault_injector_sigmoid_ramp",
+      "backend_schemas",
+      "backend_schemas_accuracytrendpoint",
+      "backend_schemas_copilotchatrequest",
+      "backend_schemas_copilotchatresponse",
+      "backend_schemas_faultinjectionrequest",
+      "backend_schemas_faultinjectionresponse",
+      "backend_schemas_faulttype",
+      "backend_schemas_feedbackrequest",
+      "backend_schemas_feedbackverdict",
+      "backend_schemas_flightprofile",
+      "backend_schemas_flightsimulationrequest",
+      "backend_schemas_flightsimulationresponse",
+      "backend_schemas_missionriskresponse",
+      "backend_schemas_rationale_1",
+      "backend_schemas_rationale_191",
+      "backend_schemas_replayevent",
+      "backend_schemas_reportgeneraterequest",
+      "backend_schemas_reportgenerateresponse",
+      "backend_schemas_residualpoint",
+      "backend_schemas_residualsresponse",
+      "backend_schemas_sensorreading",
+      "backend_schemas_stage1checkrequest",
+      "backend_schemas_stage1checkresponse",
+      "backend_schemas_stage2classifyresponse",
+      "backend_schemas_whatifrequest",
+      "backend_schemas_whatifresponse",
+      "backend_services_mission_risk",
+      "backend_services_mission_risk_missionriskscorer_what_if_analysis",
+      "backend_services_mission_risk_rationale_1",
+      "backend_services_mission_risk_rationale_77",
+      "basemodel",
+      "enum",
+      "str"
+    ],
+    "5": [
+      "backend_main_rationale_407",
+      "backend_main_websocket_telemetry_stream",
+      "backend_simulator_engine_simulator_generate_flight",
+      "backend_simulator_engine_simulator_rationale_94",
+      "backend_tests_test_simulator",
+      "backend_tests_test_simulator_climb_flight",
+      "backend_tests_test_simulator_cruise_flight",
+      "backend_tests_test_simulator_patrol_flight",
+      "backend_tests_test_simulator_py_fixture",
+      "backend_tests_test_simulator_rationale_1",
       "backend_tests_test_simulator_rationale_116",
       "backend_tests_test_simulator_rationale_130",
       "backend_tests_test_simulator_rationale_148",
+      "backend_tests_test_simulator_rationale_67",
+      "backend_tests_test_simulator_testchannelcompleteness",
+      "backend_tests_test_simulator_testchannelcompleteness_test_all_15_channels_present",
+      "backend_tests_test_simulator_testchannelcompleteness_test_channel_dimensions",
+      "backend_tests_test_simulator_testchannelcompleteness_test_timestamps_monotonic",
+      "backend_tests_test_simulator_testcsvexport",
+      "backend_tests_test_simulator_testcsvexport_test_csv_roundtrip",
       "backend_tests_test_simulator_testfaultinjection",
       "backend_tests_test_simulator_testfaultinjection_test_cylinder_targeting",
       "backend_tests_test_simulator_testfaultinjection_test_fault_modifies_affected_channels",
       "backend_tests_test_simulator_testfaultinjection_test_no_step_jumps",
       "backend_tests_test_simulator_testfaultinjection_test_pre_onset_data_unchanged",
-      "parametrize"
+      "backend_tests_test_simulator_testflightprofiles",
+      "backend_tests_test_simulator_testflightprofiles_test_climb_has_higher_rpm_than_patrol",
+      "backend_tests_test_simulator_testnominalbands",
+      "backend_tests_test_simulator_testnominalbands_test_channels_within_bounds",
+      "parametrize",
+      "websocket"
     ],
-    "5": [
+    "6": [
+      "backend_main",
+      "backend_main_copilot_chat",
+      "backend_main_generate_report_endpoint",
+      "backend_main_get_accuracy_trend",
+      "backend_main_get_alerts",
+      "backend_main_get_mission_risk",
+      "backend_main_get_residuals",
+      "backend_main_health_check",
+      "backend_main_inject_fault_endpoint",
+      "backend_main_rationale_1",
+      "backend_main_replay_flight",
+      "backend_main_simulate_flight",
+      "backend_main_stage1_check",
+      "backend_main_stage2_classify",
+      "backend_main_submit_feedback",
+      "backend_main_what_if_endpoint",
+      "backend_tests_test_api_endpoints",
+      "backend_tests_test_api_endpoints_rationale_1",
+      "backend_tests_test_api_endpoints_test_api_health",
+      "backend_tests_test_api_endpoints_test_full_pipeline_api_flow",
+      "backend_tests_test_websocket",
+      "backend_tests_test_websocket_rationale_1",
+      "backend_tests_test_websocket_test_websocket_telemetry_stream_flow",
+      "copilotchatrequest",
+      "feedbackrequest",
+      "get",
+      "post",
+      "reportgeneraterequest",
+      "stage1checkrequest",
+      "whatifrequest"
+    ],
+    "7": [
       "ref_dom",
       "ref_src",
       "ref_vite_client",
@@ -239,7 +307,7 @@
       "tsconfig_app_include",
       "tsconfig_app_json_ref_es2023"
     ],
-    "6": [
+    "8": [
       "clsx",
       "framer_motion",
       "lucide_react",
@@ -262,7 +330,7 @@
       "three",
       "types_three"
     ],
-    "7": [
+    "9": [
       "ref_node",
       "ref_vite_config_ts",
       "tsconfig_node",
@@ -284,54 +352,29 @@
       "tsconfig_node_include",
       "tsconfig_node_json_ref_es2023"
     ],
-    "8": [
-      "ref_react",
-      "src_app",
-      "src_app_app",
-      "src_components_overlayhud",
-      "src_components_overlayhud_overlayhud",
-      "src_components_overlayhud_overlayhudprops",
-      "src_components_scene3d",
-      "src_components_scene3d_aeropistonengine",
-      "src_components_scene3d_cylinderprops",
-      "src_components_scene3d_palettes",
-      "src_components_scene3d_particleswarm",
-      "src_components_scene3d_pistoncylinder",
-      "src_components_scene3d_scene3d",
-      "src_components_scene3d_sceneconfig",
-      "src_lib_motion",
-      "src_lib_motion_fadeinup",
-      "src_lib_motion_scalein",
-      "src_lib_motion_slideinright",
-      "src_lib_motion_staggercontainer",
-      "src_main"
-    ],
-    "9": [
-      "src_types_telemetry",
-      "src_types_telemetry_alertitem",
-      "src_types_telemetry_alertseverity",
-      "src_types_telemetry_faultinjectionrequest",
-      "src_types_telemetry_faultinjectionresponse",
-      "src_types_telemetry_faulttype",
-      "src_types_telemetry_feedbackverdict",
-      "src_types_telemetry_flightprofile",
-      "src_types_telemetry_flightsimulationrequest",
-      "src_types_telemetry_flightsimulationresponse",
-      "src_types_telemetry_missionriskresponse",
-      "src_types_telemetry_replayevent",
-      "src_types_telemetry_sensor_channels",
-      "src_types_telemetry_sensorchannel",
-      "src_types_telemetry_sensorreading",
-      "src_types_telemetry_stage1checkresponse",
-      "src_types_telemetry_stage2classifyresponse",
-      "src_types_telemetry_thermal_ranges",
-      "src_types_telemetry_thermalintensity"
-    ],
     "10": [
-      "backend_models_stage2_classifier",
+      "backend_simulator_engine_simulator_flightdata",
+      "backend_simulator_engine_simulator_flightdata_num_channels",
+      "backend_simulator_engine_simulator_flightdata_num_samples",
+      "backend_simulator_engine_simulator_flightdata_to_csv",
+      "backend_simulator_engine_simulator_py_path",
+      "backend_simulator_engine_simulator_rationale_36",
+      "backend_simulator_engine_simulator_rationale_54",
+      "backend_tests_test_twin_and_services_testdigitaltwinresidualengine",
+      "backend_tests_test_twin_and_services_testdigitaltwinresidualengine_test_clean_flight_low_residuals",
+      "backend_tests_test_twin_and_services_testdigitaltwinresidualengine_test_faulted_flight_elevated_residuals",
+      "backend_twin_residual_engine_digitaltwinresidualengine",
+      "backend_twin_residual_engine_digitaltwinresidualengine_compute_expected_curves",
+      "backend_twin_residual_engine_digitaltwinresidualengine_compute_residuals",
+      "backend_twin_residual_engine_digitaltwinresidualengine_init",
+      "backend_twin_residual_engine_py_ndarray",
+      "backend_twin_residual_engine_rationale_103",
+      "backend_twin_residual_engine_rationale_22",
+      "backend_twin_residual_engine_rationale_28"
+    ],
+    "11": [
       "backend_models_stage2_classifier_py_ndarray",
       "backend_models_stage2_classifier_py_path",
-      "backend_models_stage2_classifier_rationale_1",
       "backend_models_stage2_classifier_rationale_105",
       "backend_models_stage2_classifier_rationale_136",
       "backend_models_stage2_classifier_rationale_156",
@@ -346,93 +389,65 @@
       "backend_models_stage2_classifier_stage2classifier_save",
       "backend_models_stage2_classifier_stage2classifier_train"
     ],
-    "11": [
-      "backend_models_stage1_detector_py_ndarray",
-      "backend_models_stage1_detector_py_path",
-      "backend_models_stage1_detector_rationale_101",
-      "backend_models_stage1_detector_rationale_114",
-      "backend_models_stage1_detector_rationale_126",
-      "backend_models_stage1_detector_rationale_140",
-      "backend_models_stage1_detector_rationale_31",
-      "backend_models_stage1_detector_rationale_40",
-      "backend_models_stage1_detector_stage1detector",
-      "backend_models_stage1_detector_stage1detector_init",
-      "backend_models_stage1_detector_stage1detector_load",
-      "backend_models_stage1_detector_stage1detector_load_csv",
-      "backend_models_stage1_detector_stage1detector_predict",
-      "backend_models_stage1_detector_stage1detector_save",
-      "backend_models_stage1_detector_stage1detector_train"
-    ],
     "12": [
-      "backend_models_features",
-      "backend_models_features_py_ndarray",
-      "backend_models_features_rationale_1",
-      "backend_models_features_rationale_18",
-      "backend_models_features_rationale_34",
-      "backend_models_features_slope",
-      "backend_models_features_spectral_entropy",
-      "backend_models_stage1_detector",
-      "backend_models_stage1_detector_rationale_1"
-    ],
-    "13": [
-      "backend_tests_test_api_endpoints",
-      "backend_tests_test_api_endpoints_rationale_1",
-      "backend_tests_test_api_endpoints_test_api_health",
-      "backend_tests_test_api_endpoints_test_full_pipeline_api_flow"
-    ],
-    "14": [
       "tsconfig",
       "tsconfig_files",
       "tsconfig_references"
     ],
-    "15": [
+    "13": [
       "backend_init",
       "backend_init_rationale_1"
     ],
-    "16": [
+    "14": [
       "backend_models_init",
       "backend_models_init_rationale_1"
     ],
-    "17": [
+    "15": [
       "backend_services_init",
       "backend_services_init_rationale_1"
     ],
-    "18": [
+    "16": [
       "backend_simulator_init",
       "backend_simulator_init_rationale_1"
     ],
-    "19": [
+    "17": [
       "backend_tests_init",
       "backend_tests_init_rationale_1"
     ],
-    "20": [
+    "18": [
       "backend_twin_init",
       "backend_twin_init_rationale_1"
     ],
-    "21": [
+    "19": [
       "src_lib_utils",
       "src_lib_utils_cn"
+    ],
+    "20": [
+      "faultinjectionrequest"
+    ],
+    "21": [
+      "flightsimulationrequest"
     ],
     "22": [
       "vite_config"
     ]
   },
   "cohesion": {
-    "0": 0.09948979591836735,
-    "1": 0.06475485661424607,
-    "2": 0.07632850241545894,
+    "0": 0.05878084179970972,
+    "1": 0.07087486157253599,
+    "2": 0.0858974358974359,
     "3": 0.05405405405405406,
-    "4": 0.10869565217391304,
-    "5": 0.08333333333333333,
-    "6": 0.09523809523809523,
-    "7": 0.1,
-    "8": 0.1631578947368421,
-    "9": 0.10526315789473684,
-    "10": 0.13970588235294118,
-    "11": 0.18095238095238095,
-    "12": 0.25,
-    "13": 0.5,
-    "14": 0.6666666666666666,
+    "4": 0.10984848484848485,
+    "5": 0.08172043010752689,
+    "6": 0.09655172413793103,
+    "7": 0.08333333333333333,
+    "8": 0.09523809523809523,
+    "9": 0.1,
+    "10": 0.1437908496732026,
+    "11": 0.1619047619047619,
+    "12": 0.6666666666666666,
+    "13": 1.0,
+    "14": 1.0,
     "15": 1.0,
     "16": 1.0,
     "17": 1.0,
@@ -454,16 +469,6 @@
       "degree": 16
     },
     {
-      "id": "backend_schemas_alertitem",
-      "label": "AlertItem",
-      "degree": 15
-    },
-    {
-      "id": "backend_services_mission_risk_missionriskscorer",
-      "label": "MissionRiskScorer",
-      "degree": 15
-    },
-    {
       "id": "backend_simulator_fault_injector_inject_fault",
       "label": "inject_fault()",
       "degree": 15
@@ -474,24 +479,34 @@
       "degree": 15
     },
     {
+      "id": "backend_schemas_alertitem",
+      "label": "AlertItem",
+      "degree": 14
+    },
+    {
+      "id": "backend_services_mission_risk_missionriskscorer",
+      "label": "MissionRiskScorer",
+      "degree": 14
+    },
+    {
       "id": "backend_simulator_engine_simulator_flightdata",
       "label": "FlightData",
-      "degree": 13
-    },
-    {
-      "id": "backend_twin_residual_engine_digitaltwinresidualengine",
-      "label": "DigitalTwinResidualEngine",
-      "degree": 11
-    },
-    {
-      "id": "backend_models_stage2_classifier_stage2classifier",
-      "label": "Stage2Classifier",
-      "degree": 11
+      "degree": 12
     },
     {
       "id": "backend_models_stage1_detector_stage1detector",
       "label": "Stage1Detector",
-      "degree": 11
+      "degree": 10
+    },
+    {
+      "id": "backend_twin_residual_engine_digitaltwinresidualengine",
+      "label": "DigitalTwinResidualEngine",
+      "degree": 10
+    },
+    {
+      "id": "backend_models_stage2_classifier_stage2classifier",
+      "label": "Stage2Classifier",
+      "degree": 10
     }
   ],
   "surprises": [
@@ -507,10 +522,21 @@
       "why": "inferred connection - not explicitly stated in source; bridges separate communities"
     },
     {
-      "source": "generate_report_endpoint()",
-      "target": "AlertItem",
+      "source": "MissionRiskScorer",
+      "target": "MissionRiskResponse",
       "source_files": [
-        "backend/main.py",
+        "backend/services/mission_risk.py",
+        "backend/schemas.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; bridges separate communities"
+    },
+    {
+      "source": "MissionRiskScorer",
+      "target": "WhatIfResponse",
+      "source_files": [
+        "backend/services/mission_risk.py",
         "backend/schemas.py"
       ],
       "confidence": "INFERRED",
@@ -529,22 +555,11 @@
       "why": "connects across different repos/directories"
     },
     {
-      "source": "get_accuracy_trend()",
-      "target": "AccuracyTrendPoint",
+      "source": "DigitalTwinResidualEngine",
+      "target": "FlightData",
       "source_files": [
-        "backend/main.py",
-        "backend/schemas.py"
-      ],
-      "confidence": "INFERRED",
-      "relation": "uses",
-      "why": "inferred connection - not explicitly stated in source"
-    },
-    {
-      "source": "copilot_chat()",
-      "target": "CopilotChatRequest",
-      "source_files": [
-        "backend/main.py",
-        "backend/schemas.py"
+        "backend/twin/residual_engine.py",
+        "backend/simulator/engine_simulator.py"
       ],
       "confidence": "INFERRED",
       "relation": "uses",
@@ -554,38 +569,38 @@
   "questions": [
     {
       "type": "bridge_node",
-      "question": "Why does `Stage2Classifier` connect `Stage2Classifier` to `main.py`, `inject_fault`?",
-      "why": "High betweenness centrality (0.043) - this node is a cross-community bridge."
-    },
-    {
-      "type": "bridge_node",
-      "question": "Why does `Stage1Detector` connect `Stage1Detector` to `main.py`, `features.py`, `inject_fault`?",
-      "why": "High betweenness centrality (0.043) - this node is a cross-community bridge."
-    },
-    {
-      "type": "bridge_node",
-      "question": "Why does `inject_fault()` connect `inject_fault` to `main.py`, `generate_flight`, `test_twin_and_services.py`?",
+      "question": "Why does `Stage2Classifier` connect `Stage2Classifier` to `inject_fault`?",
       "why": "High betweenness centrality (0.040) - this node is a cross-community bridge."
-    },
-    {
-      "type": "verify_inferred",
-      "question": "Are the 6 inferred relationships involving `AlertItem` (e.g. with `generate_report_endpoint()` and `DecisionAlertingEngine`) actually correct?",
-      "why": "`AlertItem` has 6 INFERRED edges - model-reasoned connections that need verification."
-    },
-    {
-      "type": "verify_inferred",
-      "question": "Are the 5 inferred relationships involving `MissionRiskScorer` (e.g. with `AlertItem` and `AlertSeverity`) actually correct?",
-      "why": "`MissionRiskScorer` has 5 INFERRED edges - model-reasoned connections that need verification."
     },
     {
       "type": "isolated_nodes",
       "question": "What connects `CylinderProps`, `AlertItem`, `AlertSeverity` to the rest of the system?",
-      "why": "86 weakly-connected nodes found - possible documentation gaps or missing edges."
+      "why": "85 weakly-connected nodes found - possible documentation gaps or missing edges."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `main.py` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.09948979591836735 - nodes in this community are weakly interconnected."
+      "question": "Should `inject_fault` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.05878084179970972 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `telemetry.ts` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.07087486157253599 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `test_twin_and_services.py` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.0858974358974359 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `devDependencies` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.05405405405405406 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `schemas.py` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.10984848484848485 - nodes in this community are weakly interconnected."
     }
   ]
 }

@@ -142,3 +142,22 @@ export function thermalIntensity(
 ): number {
   return Math.max(0, Math.min(1, (value - min) / (max - min)));
 }
+
+// ─── Real-Time WebSocket Telemetry Packet ───────────────────────────────────────
+
+export interface LiveTelemetryPacket {
+  type: "telemetry";
+  flight_id: string;
+  t: number;
+  duration_seconds: number;
+  progress_pct: number;
+  rpm: number;
+  channels: Record<SensorChannel, number>;
+  alerts: AlertItem[];
+  mission_risk: MissionRiskResponse;
+  stage1_anomaly: boolean;
+  stage2_fault: string;
+  is_paused: boolean;
+  speed: number;
+}
+

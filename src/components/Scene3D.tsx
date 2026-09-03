@@ -2,6 +2,7 @@ import { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Stars, Float } from "@react-three/drei";
 import * as THREE from "three";
+import { type LiveTelemetryPacket } from "../types/telemetry";
 
 export interface SceneConfig {
   wireframe: boolean;
@@ -12,6 +13,7 @@ export interface SceneConfig {
   selectedCylinder: number | null;
   activeFault: string | null;
   rpm: number;
+  explodedView: boolean;
 }
 
 export const PALETTES: Record<string, { primary: string; secondary: string; glow: string; name: string }> = {
@@ -47,10 +49,11 @@ export const PALETTES: Record<string, { primary: string; secondary: string; glow
   },
 };
 
-// ─── Piston Cylinder Unit (Horizontally-Opposed Boxer) ──────────────────────────
+// ─── Piston Cylinder Unit ───────────────────────────────────────────────────────
 
 interface CylinderProps {
   id: number;
+  groupRef: React.RefObject<THREE.Group | null>;
   position: [number, number, number];
   rotation: [number, number, number];
   tempC: number;
@@ -61,6 +64,7 @@ interface CylinderProps {
 
 function PistonCylinder({
   id,
+  groupRef,
   position,
   rotation,
   tempC,
@@ -68,25 +72,21 @@ function PistonCylinder({
   wireframe,
   onSelect,
 }: CylinderProps) {
-  const meshRef = useRef<THREE.Group>(null);
-
-  // Compute thermal color gradient based on CHT
-  // Normal: < 190°C (green/cyan) | Caution: 190-230°C (amber) | Critical: > 230°C (crimson)
   const thermalColor = useMemo(() => {
-    if (tempC > 230) return "#ef4444"; // critical red
-    if (tempC > 190) return "#f59e0b"; // caution amber
-    return "#10b981"; // nominal emerald
+    if (tempC > 230) return "#ef4444";
+    if (tempC > 190) return "#f59e0b";
+    return "#10b981";
   }, [tempC]);
 
   const emissiveIntensity = useMemo(() => {
-    if (tempC > 230) return 0.9;
-    if (tempC > 190) return 0.5;
+    if (tempC > 230) return 0.95;
+    if (tempC > 190) return 0.55;
     return 0.15;
   }, [tempC]);
 
   return (
     <group
-      ref={meshRef}
+      ref={groupRef}
       position={position}
       rotation={rotation}
       onClick={(e) => {
@@ -157,23 +157,43 @@ function PistonCylinder({
   );
 }
 
-// ─── 4-Cylinder Aero Piston Engine Assembly ─────────────────────────────────────
+// ─── 4-Cylinder Aero Piston Engine Assembly with Exploded View ──────────────────
 
 function AeroPistonEngine({
   config,
+  livePacket,
   onSelectCylinder,
 }: {
   config: SceneConfig;
+  livePacket: LiveTelemetryPacket | null;
   onSelectCylinder: (id: number) => void;
 }) {
   const engineRef = useRef<THREE.Group>(null);
   const propRef = useRef<THREE.Group>(null);
+  const propAssemblyRef = useRef<THREE.Group>(null);
+  const coolerRef = useRef<THREE.Mesh>(null);
+  const altRef = useRef<THREE.Mesh>(null);
 
-  // Compute live simulated temperatures
+  const cyl1Ref = useRef<THREE.Group>(null);
+  const cyl2Ref = useRef<THREE.Group>(null);
+  const cyl3Ref = useRef<THREE.Group>(null);
+  const cyl4Ref = useRef<THREE.Group>(null);
+
+  const currentExploded = useRef(0);
+
+  // Dynamic CHT temperatures (from live packet or fallback calculation)
   const chts = useMemo(() => {
+    if (livePacket?.channels) {
+      return [
+        livePacket.channels.E1_CHT1,
+        livePacket.channels.E1_CHT2,
+        livePacket.channels.E1_CHT3,
+        livePacket.channels.E1_CHT4,
+      ];
+    }
     const base = [165, 158, 168, 155];
     if (config.activeFault === "cylinder_head_overheat") {
-      base[1] += 85; // Cylinder 2 thermal runaway
+      base[1] += 85;
     } else if (config.activeFault === "oil_cooler_degradation") {
       base[0] += 30;
       base[1] += 35;
@@ -181,19 +201,39 @@ function AeroPistonEngine({
       base[3] += 30;
     }
     return base;
-  }, [config.activeFault]);
+  }, [livePacket, config.activeFault]);
 
-  // Propeller spin animation coupled to engine RPM
+  const liveRPM = livePacket?.rpm || config.rpm;
+
+  // Frame Loop: Propeller rotation & Smooth Exploded View animation
   useFrame((_, delta) => {
+    // 1. Propeller spin
     if (propRef.current) {
-      const radPerSec = (config.rpm / 60) * 2 * Math.PI * 0.15;
+      const radPerSec = (liveRPM / 60) * 2 * Math.PI * 0.15;
       propRef.current.rotation.z -= delta * radPerSec;
     }
+
+    // 2. Smooth Exploded View interpolation
+    const targetOffset = config.explodedView ? 1.0 : 0.0;
+    currentExploded.current = THREE.MathUtils.lerp(currentExploded.current, targetOffset, delta * 5.0);
+    const offset = currentExploded.current;
+
+    if (cyl1Ref.current) cyl1Ref.current.position.set(-0.8 - offset * 1.2, 0.1, 0.6);
+    if (cyl2Ref.current) cyl2Ref.current.position.set(0.8 + offset * 1.2, 0.1, 0.6);
+    if (cyl3Ref.current) cyl3Ref.current.position.set(-0.8 - offset * 1.2, 0.1, -0.6);
+    if (cyl4Ref.current) cyl4Ref.current.position.set(0.8 + offset * 1.2, 0.1, -0.6);
+
+    if (propAssemblyRef.current) propAssemblyRef.current.position.set(0, 0, 1.4 + offset * 1.2);
+    if (coolerRef.current) coolerRef.current.position.set(0, 0.9 + offset * 0.8, 0.4);
+    if (altRef.current) altRef.current.position.set(0, -0.1, -1.5 - offset * 1.0);
   });
+
+  const isOilFault = config.activeFault === "oil_cooler_degradation" || (livePacket?.stage2_fault === "oil_cooler_degradation");
+  const isAltFault = config.activeFault === "alternator_rectifier_drift" || (livePacket?.stage2_fault === "alternator_rectifier_drift");
 
   return (
     <group ref={engineRef} position={[0, 0, 0]}>
-      {/* Central Cast Aluminum Crankcase */}
+      {/* Central Crankcase */}
       <mesh position={[0, 0, 0]}>
         <boxGeometry args={[1.4, 1.2, 2.4]} />
         <meshStandardMaterial
@@ -208,49 +248,42 @@ function AeroPistonEngine({
       <mesh position={[0, -0.8, 0]}>
         <boxGeometry args={[1.0, 0.45, 1.8]} />
         <meshStandardMaterial
-          color={config.activeFault === "oil_cooler_degradation" ? "#dc2626" : "#0f172a"}
-          emissive={config.activeFault === "oil_cooler_degradation" ? "#ef4444" : "#000000"}
-          emissiveIntensity={config.activeFault === "oil_cooler_degradation" ? 0.7 : 0.0}
+          color={isOilFault ? "#dc2626" : "#0f172a"}
+          emissive={isOilFault ? "#ef4444" : "#000000"}
+          emissiveIntensity={isOilFault ? 0.7 : 0.0}
           roughness={0.4}
           metalness={0.9}
           wireframe={config.wireframe}
         />
       </mesh>
 
-      {/* Front Nose Cone / Propeller Hub */}
-      <mesh position={[0, 0, 1.4]} rotation={[Math.PI / 2, 0, 0]}>
-        <coneGeometry args={[0.45, 0.7, 32]} />
-        <meshStandardMaterial
-          color="#38bdf8"
-          roughness={0.2}
-          metalness={0.9}
-          wireframe={config.wireframe}
-        />
-      </mesh>
+      {/* Front Nose Cone + Propeller Assembly */}
+      <group ref={propAssemblyRef} position={[0, 0, 1.4]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[0.45, 0.7, 32]} />
+          <meshStandardMaterial color="#38bdf8" roughness={0.2} metalness={0.9} wireframe={config.wireframe} />
+        </mesh>
 
-      {/* Rotating 2-Blade UAV Propeller */}
-      <group ref={propRef} position={[0, 0, 1.75]}>
-        {/* Hub */}
-        <mesh>
-          <sphereGeometry args={[0.25, 16, 16]} />
-          <meshStandardMaterial color="#0284c7" metalness={0.9} />
-        </mesh>
-        {/* Blade 1 */}
-        <mesh position={[0, 1.5, 0]}>
-          <boxGeometry args={[0.18, 2.6, 0.03]} />
-          <meshStandardMaterial color="#0f172a" roughness={0.3} metalness={0.8} />
-        </mesh>
-        {/* Blade 2 */}
-        <mesh position={[0, -1.5, 0]}>
-          <boxGeometry args={[0.18, 2.6, 0.03]} />
-          <meshStandardMaterial color="#0f172a" roughness={0.3} metalness={0.8} />
-        </mesh>
+        <group ref={propRef} position={[0, 0, 0.35]}>
+          <mesh>
+            <sphereGeometry args={[0.25, 16, 16]} />
+            <meshStandardMaterial color="#0284c7" metalness={0.9} />
+          </mesh>
+          <mesh position={[0, 1.5, 0]}>
+            <boxGeometry args={[0.18, 2.6, 0.03]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.3} metalness={0.8} />
+          </mesh>
+          <mesh position={[0, -1.5, 0]}>
+            <boxGeometry args={[0.18, 2.6, 0.03]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.3} metalness={0.8} />
+          </mesh>
+        </group>
       </group>
 
       {/* 4 Horizontally-Opposed Boxer Cylinders */}
-      {/* Cylinder 1: Left-Front */}
       <PistonCylinder
         id={1}
+        groupRef={cyl1Ref}
         position={[-0.8, 0.1, 0.6]}
         rotation={[0, 0, Math.PI / 2]}
         tempC={chts[0]}
@@ -259,9 +292,9 @@ function AeroPistonEngine({
         onSelect={onSelectCylinder}
       />
 
-      {/* Cylinder 2: Right-Front (Targeted in overheat test) */}
       <PistonCylinder
         id={2}
+        groupRef={cyl2Ref}
         position={[0.8, 0.1, 0.6]}
         rotation={[0, 0, -Math.PI / 2]}
         tempC={chts[1]}
@@ -270,9 +303,9 @@ function AeroPistonEngine({
         onSelect={onSelectCylinder}
       />
 
-      {/* Cylinder 3: Left-Rear */}
       <PistonCylinder
         id={3}
+        groupRef={cyl3Ref}
         position={[-0.8, 0.1, -0.6]}
         rotation={[0, 0, Math.PI / 2]}
         tempC={chts[2]}
@@ -281,9 +314,9 @@ function AeroPistonEngine({
         onSelect={onSelectCylinder}
       />
 
-      {/* Cylinder 4: Right-Rear */}
       <PistonCylinder
         id={4}
+        groupRef={cyl4Ref}
         position={[0.8, 0.1, -0.6]}
         rotation={[0, 0, -Math.PI / 2]}
         tempC={chts[3]}
@@ -293,23 +326,23 @@ function AeroPistonEngine({
       />
 
       {/* Front Oil Cooler Radiator Matrix */}
-      <mesh position={[0, 0.9, 0.4]}>
+      <mesh ref={coolerRef} position={[0, 0.9, 0.4]}>
         <boxGeometry args={[0.9, 0.4, 0.15]} />
         <meshStandardMaterial
-          color={config.activeFault === "oil_cooler_degradation" ? "#f43f5e" : "#06b6d4"}
-          emissive={config.activeFault === "oil_cooler_degradation" ? "#f43f5e" : "#06b6d4"}
-          emissiveIntensity={config.activeFault === "oil_cooler_degradation" ? 0.8 : 0.2}
+          color={isOilFault ? "#f43f5e" : "#06b6d4"}
+          emissive={isOilFault ? "#f43f5e" : "#06b6d4"}
+          emissiveIntensity={isOilFault ? 0.8 : 0.2}
           wireframe={config.wireframe}
         />
       </mesh>
 
-      {/* Rear Accessory Gearbox / Alternator Unit */}
-      <mesh position={[0, -0.1, -1.5]}>
+      {/* Rear Alternator Unit */}
+      <mesh ref={altRef} position={[0, -0.1, -1.5]}>
         <cylinderGeometry args={[0.35, 0.35, 0.6, 24]} />
         <meshStandardMaterial
-          color={config.activeFault === "alternator_rectifier_drift" ? "#eab308" : "#64748b"}
-          emissive={config.activeFault === "alternator_rectifier_drift" ? "#facc15" : "#000000"}
-          emissiveIntensity={config.activeFault === "alternator_rectifier_drift" ? 0.7 : 0.0}
+          color={isAltFault ? "#eab308" : "#64748b"}
+          emissive={isAltFault ? "#facc15" : "#000000"}
+          emissiveIntensity={isAltFault ? 0.7 : 0.0}
           wireframe={config.wireframe}
         />
       </mesh>
@@ -364,9 +397,11 @@ function ParticleSwarm({ count, color }: { count: number; color: string }) {
 
 export function Scene3D({
   config,
+  livePacket = null,
   onSelectCylinder,
 }: {
   config: SceneConfig;
+  livePacket?: LiveTelemetryPacket | null;
   onSelectCylinder: (id: number) => void;
 }) {
   const activePalette = PALETTES[config.paletteKey] || PALETTES.cyber;
@@ -374,7 +409,7 @@ export function Scene3D({
   return (
     <div className="canvas-container">
       <Canvas
-        camera={{ position: [4.5, 3.2, 5.0], fov: 42 }}
+        camera={{ position: [5.2, 3.6, 5.8], fov: 40 }}
         dpr={[1, 2]}
         gl={{ antialias: true, powerPreference: "high-performance" }}
       >
@@ -387,8 +422,12 @@ export function Scene3D({
         <pointLight position={[0, 3, 2]} intensity={1.2} color={activePalette.secondary} />
 
         {/* 4-Cylinder Aero Engine Digital Twin */}
-        <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.4}>
-          <AeroPistonEngine config={config} onSelectCylinder={onSelectCylinder} />
+        <Float speed={1.2} rotationIntensity={0.15} floatIntensity={0.3}>
+          <AeroPistonEngine
+            config={config}
+            livePacket={livePacket}
+            onSelectCylinder={onSelectCylinder}
+          />
         </Float>
 
         {/* Particle Cloud */}
@@ -403,7 +442,7 @@ export function Scene3D({
           dampingFactor={0.05}
           autoRotate={config.autoRotate}
           autoRotateSpeed={config.rotationSpeed}
-          maxDistance={18}
+          maxDistance={22}
           minDistance={2.5}
         />
       </Canvas>

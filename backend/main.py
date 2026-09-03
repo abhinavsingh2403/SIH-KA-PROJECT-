@@ -15,10 +15,11 @@ Exposes all 10 modules from the DRDO specification:
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 
@@ -394,6 +395,126 @@ def get_accuracy_trend():
     true_pos = sum(1 for f in _feedback if f["verdict"] == "true_positive")
     acc = (true_pos / len(_feedback)) * 100.0
     return [AccuracyTrendPoint(flight_id="latest_batch", accuracy_pct=round(acc, 1))]
+
+
+# ─── 2.11 Real-Time WebSocket Telemetry Stream ──────────────────────────────────
+
+@app.websocket("/api/ws/telemetry/{flight_id}")
+async def websocket_telemetry_stream(
+    websocket: WebSocket,
+    flight_id: str,
+):
+    """
+    Bi-directional streaming WebSocket for live 3D Digital Twin visualization.
+    Streams second-by-second telemetry packets at adjustable playback speeds (1x, 5x, 20x).
+    Accepts control commands: pause, resume, set_speed, seek, inject_fault.
+    """
+    await websocket.accept()
+
+    # If demo or flight_id not found, create a 10-minute demo flight
+    if flight_id == "demo" or flight_id not in _flights:
+        demo_flight = generate_flight(profile="patrol", duration_s=600)
+        _flights[demo_flight.flight_id] = demo_flight
+        _alerts[demo_flight.flight_id] = []
+        flight = demo_flight
+        flight_id = demo_flight.flight_id
+    else:
+        flight = _flights[flight_id]
+
+    current_t_idx = 0
+    speed = 1.0
+    paused = False
+
+    try:
+        while True:
+            # Check for incoming client control messages non-blockingly
+            try:
+                msg_text = await asyncio.wait_for(websocket.receive_text(), timeout=0.01)
+                cmd = json.loads(msg_text)
+                action = cmd.get("action")
+                if action == "pause":
+                    paused = True
+                elif action == "resume":
+                    paused = False
+                elif action == "set_speed":
+                    speed = max(0.5, min(20.0, float(cmd.get("speed", 1.0))))
+                elif action == "seek":
+                    target_t = float(cmd.get("t", 0))
+                    current_t_idx = max(0, min(flight.num_samples - 1, int(target_t * flight.sample_rate_hz)))
+                elif action == "inject_fault":
+                    fault_type = cmd.get("fault_type", "cylinder_head_overheat")
+                    severity = float(cmd.get("severity", 0.8))
+                    target_cyl = cmd.get("target_cylinder", 2)
+                    modified, meta = inject_fault(
+                        flight_data=flight,
+                        fault_type=fault_type,
+                        onset_time_pct=max(0.05, current_t_idx / flight.num_samples),
+                        severity=severity,
+                        target_cylinder=target_cyl,
+                    )
+                    _flights[flight_id] = modified
+                    flight = modified
+                    _faults[meta["fault_id"]] = meta
+
+                    alert = alerting_engine.evaluate_alert(
+                        flight_id=flight_id,
+                        timestamp=float(flight.timestamps[current_t_idx]),
+                        fault_type=fault_type,
+                        stage1_confidence=0.97,
+                        stage2_confidence=0.94,
+                        key_sensors=meta["affected_channels"],
+                    )
+                    alert.report_text = copilot_service.generate_report(alert)
+                    _alerts[flight_id] = [alert]
+            except (asyncio.TimeoutError, json.JSONDecodeError):
+                pass
+
+            if not paused and current_t_idx < flight.num_samples:
+                t = float(flight.timestamps[current_t_idx])
+                raw_channels = {
+                    ch: round(float(flight.channels[ch][current_t_idx]), 3)
+                    for ch in SENSOR_CHANNELS
+                }
+
+                # RPM dynamically coupled to fuel flow and throttle
+                fflow = raw_channels.get("E1_FFlow", 10.0)
+                rpm = round(1800.0 + ((fflow - 6.0) / 12.0) * 900.0, 0)
+
+                active_alerts = _alerts.get(flight_id, [])
+                risk_resp = risk_scorer.score_flight(flight_id, active_alerts)
+
+                # Stage 1 anomaly and Stage 2 fault label
+                is_anom = any(a.severity.value in ("warning", "critical") for a in active_alerts)
+                fault_name = active_alerts[0].fault_type if active_alerts else "normal"
+
+                packet = {
+                    "type": "telemetry",
+                    "flight_id": flight_id,
+                    "t": t,
+                    "duration_seconds": flight.duration_s,
+                    "progress_pct": round((current_t_idx / flight.num_samples) * 100, 1),
+                    "rpm": rpm,
+                    "channels": raw_channels,
+                    "alerts": [a.model_dump() for a in active_alerts],
+                    "mission_risk": risk_resp.model_dump(),
+                    "stage1_anomaly": is_anom,
+                    "stage2_fault": fault_name,
+                    "is_paused": paused,
+                    "speed": speed,
+                }
+                await websocket.send_json(packet)
+                current_t_idx += 1
+
+            # Playback delay throttled by speed multiplier
+            delay = 0.08 / speed
+            await asyncio.sleep(delay)
+
+            # Continuous loop back to beginning when flight reaches end
+            if current_t_idx >= flight.num_samples:
+                current_t_idx = 0
+
+    except WebSocketDisconnect:
+        pass
 
 
 # ─── Entrypoint ─────────────────────────────────────────────────────────────────

@@ -12,22 +12,22 @@
     "semantic_hash": "5e60e462d34545ef9000f729c28273eb"
   },
   "src/App.tsx": {
-    "mtime": 1788444331.293236,
-    "seen": 1788444768.9946094,
-    "ast_hash": "565e7e8c94dc5aaff68baa249098fc82",
-    "semantic_hash": "565e7e8c94dc5aaff68baa249098fc82"
+    "mtime": 1788445523.5130243,
+    "seen": 1788445617.6007318,
+    "ast_hash": "03cbb93c2e0100fa692f6244ae72e6f3",
+    "semantic_hash": "03cbb93c2e0100fa692f6244ae72e6f3"
   },
   "src/components/OverlayHUD.tsx": {
-    "mtime": 1788444313.9096694,
-    "seen": 1788444768.994615,
-    "ast_hash": "47bffd753dfcc65d770aceec8e14af54",
-    "semantic_hash": "47bffd753dfcc65d770aceec8e14af54"
+    "mtime": 1788445555.3831172,
+    "seen": 1788445617.600736,
+    "ast_hash": "97b2c409e187179ee22cfca603dd3b5e",
+    "semantic_hash": "97b2c409e187179ee22cfca603dd3b5e"
   },
   "src/components/Scene3D.tsx": {
-    "mtime": 1788444286.2863028,
-    "seen": 1788444768.99462,
-    "ast_hash": "cea5318011cfcdb14f3379ffd54f11a2",
-    "semantic_hash": "cea5318011cfcdb14f3379ffd54f11a2"
+    "mtime": 1788445493.6522074,
+    "seen": 1788445617.6007402,
+    "ast_hash": "ec0d223620972fbffc7f5f80bde25e78",
+    "semantic_hash": "ec0d223620972fbffc7f5f80bde25e78"
   },
   "src/lib/motion.ts": {
     "mtime": 1788441962.0370097,
@@ -84,10 +84,10 @@
     "semantic_hash": "2fd23fbbb0ec0ead86253e70b128079e"
   },
   "backend/main.py": {
-    "mtime": 1788444147.7173655,
-    "seen": 1788444768.9940424,
-    "ast_hash": "4f3dec0b408b30cff8d32b528a80edc6",
-    "semantic_hash": "4f3dec0b408b30cff8d32b528a80edc6"
+    "mtime": 1788445373.3541129,
+    "seen": 1788445617.5927804,
+    "ast_hash": "3bdc1d27af4c5c36aac85345bb3ba78b",
+    "semantic_hash": "3bdc1d27af4c5c36aac85345bb3ba78b"
   },
   "backend/models/__init__.py": {
     "mtime": 1788443869.2026584,
@@ -222,9 +222,21 @@
     "semantic_hash": "3c87d83fe4f85b03d66ce597b86e7bcc"
   },
   "src/types/telemetry.ts": {
-    "mtime": 1788442942.2646823,
-    "seen": 1788444768.995869,
-    "ast_hash": "7d4338db19bded1cd1bee60746dd93bb",
-    "semantic_hash": "7d4338db19bded1cd1bee60746dd93bb"
+    "mtime": 1788445454.8701115,
+    "seen": 1788445617.6015284,
+    "ast_hash": "736d60654df62aab747d866cc5f3a4c9",
+    "semantic_hash": "736d60654df62aab747d866cc5f3a4c9"
+  },
+  "backend/tests/test_websocket.py": {
+    "mtime": 1788445381.4880085,
+    "seen": 1788445617.599154,
+    "ast_hash": "104359d77a80acbcd687a827eec40aea",
+    "semantic_hash": "104359d77a80acbcd687a827eec40aea"
+  },
+  "src/lib/useTelemetrySocket.ts": {
+    "mtime": 1788445462.2431815,
+    "seen": 1788445617.6010923,
+    "ast_hash": "7d04f9a8339cdb36834a65777109e7b9",
+    "semantic_hash": "7d04f9a8339cdb36834a65777109e7b9"
   }
 }

@@ -27,7 +27,7 @@ import {
   Download,
   Printer,
 } from "lucide-react";
-import { Scene3D, type SceneConfig, PALETTES } from "./Scene3D";
+import { Scene3D, type SceneConfig } from "./Scene3D";
 import { TelemetryCharts } from "./TelemetryCharts";
 import { type LiveTelemetryPacket, type FederatedSummary } from "../types/telemetry";
 
@@ -316,14 +316,14 @@ export function Dashboard({
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xs sm:text-sm font-black tracking-tight text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
-                  DRDO <span className="text-orange-600">ISRO-NASA</span> DIGITAL TWIN
+                  DRDO <span className="text-sky-600">MALE UAV</span> DIGITAL TWIN
                 </h1>
                 <span className="hidden md:inline-block text-[10px] font-mono-tech px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-600 font-semibold whitespace-nowrap">
                   {livePacket?.flight_id ? `ID: ${livePacket.flight_id.slice(0, 10)}` : "TAPAS-04"}
                 </span>
               </div>
               <p className="text-[10px] text-slate-400 font-mono-tech whitespace-nowrap">
-                ROTAX-LYCOMING PROXY • 15 CHANNELS • 60 FPS
+                AERO PISTON ENGINE • 15 CHANNELS • 60 FPS
               </p>
             </div>
           </div>
@@ -443,23 +443,6 @@ export function Dashboard({
             <span className="text-[10px] font-bold whitespace-nowrap">
               {isConnected ? "WS 8000" : "SIM"}
             </span>
-          </div>
-
-          {/* Theme Palette Switcher */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 shrink-0">
-            {Object.entries(PALETTES).map(([key]) => (
-              <button
-                key={key}
-                onClick={() => onChange({ paletteKey: key })}
-                className={`px-1.5 py-0.5 rounded text-[9px] font-semibold transition-all cursor-pointer ${
-                  config.paletteKey === key
-                    ? "bg-white text-slate-900 shadow-xs border border-slate-200 font-bold"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                {key.toUpperCase()}
-              </button>
-            ))}
           </div>
         </div>
       </header>

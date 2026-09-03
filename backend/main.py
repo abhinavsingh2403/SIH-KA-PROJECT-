@@ -56,6 +56,7 @@ from backend.services.mission_risk import MissionRiskScorer
 from backend.services.llm_copilot import LLMCopilotService
 from backend.services.mavlink_ingest import MAVLinkTelemetryParser
 from backend.models.federated_fleet import FleetFederatedAggregator
+from backend.services.supabase_client import supabase_service
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -425,6 +426,8 @@ async def websocket_telemetry_stream(
     else:
         flight = _flights[flight_id]
 
+    supabase_service.save_flight(flight.flight_id, flight.profile, flight.duration_s, "active")
+
     current_t_idx = 0
     speed = 1.0
     paused = False
@@ -477,6 +480,7 @@ async def websocket_telemetry_stream(
                         )
                         alert.report_text = copilot_service.generate_report(alert)
                         _alerts[flight_id] = [alert]
+                        supabase_service.save_alert(alert.model_dump())
 
                 elif action == "set_profile":
                     new_profile = cmd.get("profile", "patrol")
@@ -532,6 +536,8 @@ async def websocket_telemetry_stream(
                     "speed": speed,
                 }
                 await websocket.send_json(packet)
+                if current_t_idx % 25 == 0:
+                    supabase_service.save_telemetry_packet(packet)
                 current_t_idx += 1
 
             # Playback delay throttled by speed multiplier
@@ -584,6 +590,40 @@ def get_fleet_federated_status():
         "rounds_completed": len(fleet_aggregator.round_history),
         "history": fleet_aggregator.round_history,
     }
+
+
+# ─── 2.14 Supabase Cloud Database & Telemetry Persistence ──────────────────────
+
+@app.get("/api/supabase/status")
+def get_supabase_status():
+    """
+    Returns live Supabase database connection health, active mode (cloud vs embedded
+    resilient fallback), and total persisted flights and telemetry records.
+    """
+    return supabase_service.get_status()
+
+
+@app.get("/api/supabase/flights")
+def get_supabase_flights(limit: int = 20):
+    """Retrieves list of flights persisted in Supabase database."""
+    return supabase_service.get_flights(limit=limit)
+
+
+@app.post("/api/supabase/sync-flight/{flight_id}")
+def sync_flight_to_supabase(flight_id: str):
+    """Saves active flight metadata and recorded frames to Supabase."""
+    flight = _flights.get(flight_id)
+    if not flight:
+        flight = generate_flight(profile="patrol", duration_s=600, seed=42)
+        _flights[flight_id] = flight
+    saved = supabase_service.save_flight(flight.flight_id, flight.profile, flight.duration_s, "active")
+    return {"status": "synced", "flight": saved}
+
+
+@app.get("/api/supabase/alerts")
+def get_supabase_alerts(limit: int = 50):
+    """Retrieves logged FMEA diagnostic alerts and reports from Supabase."""
+    return supabase_service.get_alerts(limit=limit)
 
 
 # ─── Entrypoint ─────────────────────────────────────────────────────────────────

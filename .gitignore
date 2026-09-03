@@ -29,3 +29,5 @@ __pycache__/
 *$py.class
 .pytest_cache/
 *.joblib.tmp
+*.db
+.env

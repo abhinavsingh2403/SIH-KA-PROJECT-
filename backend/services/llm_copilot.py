@@ -22,6 +22,9 @@ class LLMCopilotService:
         sensors = ", ".join(alert.key_sensors) if alert.key_sensors else "primary channels"
         conf_pct = int(alert.confidence * 100)
 
+        if alert.fault_type in ("normal", "clean", "nominal"):
+            return "Engine operation within certified tolerances. All thermodynamic and electrical parameters nominal."
+
         if alert.fault_type == "oil_cooler_degradation":
             return (
                 f"Oil temperature rising with simultaneous oil pressure drop detected on {sensors} "

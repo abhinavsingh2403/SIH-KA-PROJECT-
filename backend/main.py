@@ -542,7 +542,7 @@ async def websocket_telemetry_stream(
             if current_t_idx >= flight.num_samples:
                 current_t_idx = 0
 
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, ConnectionResetError, asyncio.CancelledError):
         pass
 
 

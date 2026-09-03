@@ -9,17 +9,31 @@ export function useTelemetrySocket(url: string = DEFAULT_WS_URL) {
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
 
   const connect = useCallback(() => {
+    if (!isMountedRef.current) return;
+
     try {
+      if (wsRef.current) {
+        try {
+          wsRef.current.close();
+        } catch {
+          // ignore
+        }
+      }
+
       const ws = new WebSocket(url);
       wsRef.current = ws;
 
       ws.onopen = () => {
-        setIsConnected(true);
+        if (isMountedRef.current) {
+          setIsConnected(true);
+        }
       };
 
       ws.onmessage = (event) => {
+        if (!isMountedRef.current) return;
         try {
           const msg = JSON.parse(event.data);
           if (msg.type === "telemetry") {
@@ -33,24 +47,34 @@ export function useTelemetrySocket(url: string = DEFAULT_WS_URL) {
       };
 
       ws.onerror = () => {
-        setIsConnected(false);
+        if (isMountedRef.current) {
+          setIsConnected(false);
+        }
       };
 
       ws.onclose = () => {
+        if (!isMountedRef.current) return;
         setIsConnected(false);
         // Attempt reconnection after 3 seconds
+        if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = window.setTimeout(() => {
-          connect();
+          if (isMountedRef.current) {
+            connect();
+          }
         }, 3000);
       };
     } catch {
-      setIsConnected(false);
+      if (isMountedRef.current) {
+        setIsConnected(false);
+      }
     }
   }, [url]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     connect();
     return () => {
+      isMountedRef.current = false;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }

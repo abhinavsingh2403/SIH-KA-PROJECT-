@@ -9,8 +9,6 @@ interface TelemetryChartsProps {
   onSelectCylinder?: (id: number) => void;
 }
 
-// ─── Reusable Multi-line SVG Sparkline / Time-Series Chart ───────────────────────
-
 interface SeriesConfig {
   key: SensorChannel;
   name: string;
@@ -29,6 +27,7 @@ function MultiLineChart({
   cautionThresh,
   criticalThresh,
   highlightKey,
+  onBadgeClick,
 }: {
   title: string;
   subtitle: string;
@@ -40,38 +39,44 @@ function MultiLineChart({
   cautionThresh?: number;
   criticalThresh?: number;
   highlightKey?: string | null;
+  onBadgeClick?: (key: string) => void;
 }) {
   const width = 420;
-  const height = 130;
-  const padding = { top: 12, right: 12, bottom: 20, left: 36 };
+  const height = 110;
+  const padding = { top: 10, right: 12, bottom: 18, left: 34 };
 
   const plotW = width - padding.left - padding.right;
   const plotH = height - padding.top - padding.bottom;
 
-  // Generate SVG path for a specific sensor channel across history
+  // Use a fixed buffer length of 35 points to eliminate stretching and shaking
   const paths = useMemo(() => {
     if (history.length < 2) return [];
 
     return series.map((s) => {
-      const pts = history.map((pkt, idx) => {
-        const x = padding.left + (idx / (history.length - 1)) * plotW;
-        const rawVal = pkt.channels[s.key] ?? minVal;
+      const pts: string[] = [];
+      const len = history.length;
+
+      for (let i = 0; i < len; i++) {
+        const pkt = history[i];
+        const x = padding.left + (i / Math.max(1, len - 1)) * plotW;
+        const rawVal = pkt?.channels?.[s.key] ?? minVal;
         const clamped = Math.max(minVal, Math.min(maxVal, rawVal));
         const y = padding.top + plotH - ((clamped - minVal) / (maxVal - minVal)) * plotH;
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      });
+        pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+      }
+
+      const lastVal = history[history.length - 1]?.channels?.[s.key] ?? minVal;
 
       return {
         key: s.key,
         name: s.name,
         color: s.color,
         d: `M ${pts.join(" L ")}`,
-        currentVal: history[history.length - 1]?.channels[s.key] ?? minVal,
+        currentVal: lastVal,
       };
     });
   }, [history, series, minVal, maxVal, plotW, plotH, padding.left, padding.top]);
 
-  // Compute Y coordinate for threshold lines
   const cautionY = cautionThresh
     ? padding.top + plotH - ((cautionThresh - minVal) / (maxVal - minVal)) * plotH
     : null;
@@ -80,48 +85,53 @@ function MultiLineChart({
     : null;
 
   return (
-    <div className="aero-panel p-3.5 space-y-2">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+    <div className="aero-panel p-3 space-y-2 select-none">
+      {/* Header with Fixed-Width Indicators to prevent horizontal shaking */}
+      <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
         <div className="flex items-center gap-2">
-          <div className="p-1 rounded bg-sky-50 text-sky-600 border border-sky-100">
+          <div className="p-1 rounded bg-sky-50 text-sky-600 border border-sky-100 shrink-0">
             <Icon className="w-3.5 h-3.5" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-slate-800 tracking-tight">{title}</h3>
-            <p className="text-[10px] text-slate-400">{subtitle}</p>
+            <h3 className="text-xs font-bold text-slate-800 tracking-tight leading-none">{title}</h3>
+            <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{subtitle}</p>
           </div>
         </div>
 
-        {/* Live Channel Badges */}
-        <div className="flex items-center gap-2">
+        {/* Live Channel Badges with fixed layout */}
+        <div className="flex items-center gap-1.5">
           {paths.map((p) => {
             const isHighlighted = highlightKey ? p.key.includes(highlightKey) : false;
             return (
-              <div
+              <button
                 key={p.key}
-                className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border transition-all ${
+                onClick={() => onBadgeClick?.(p.key)}
+                className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
                   isHighlighted
-                    ? "bg-sky-50 border-sky-300 font-bold"
-                    : "bg-slate-50 border-slate-200"
+                    ? "bg-sky-100 border-sky-400 font-bold text-sky-900"
+                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: p.color }} />
-                <span className="text-slate-500">{p.name.split(" ")[0]}</span>
-                <span className="font-mono-tech font-bold text-slate-800">
+                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                <span className="font-semibold text-slate-500">{p.name.split(" ")[0]}</span>
+                <span className="font-mono-tech font-bold text-slate-900 w-7 text-right inline-block tabular-nums">
                   {Math.round(p.currentVal)}
                 </span>
-              </div>
+              </button>
             );
           })}
         </div>
       </div>
 
-      {/* SVG Chart Canvas */}
-      <div className="relative w-full overflow-hidden">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible select-none">
-          {/* Horizontal Gridlines */}
-          {[0, 0.25, 0.5, 0.75, 1.0].map((frac, i) => {
+      {/* SVG Chart Canvas with FIXED height to prevent vertical jitter */}
+      <div className="relative w-full h-[105px] overflow-hidden bg-slate-50/50 rounded border border-slate-100">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="w-full h-full block"
+          preserveAspectRatio="none"
+        >
+          {/* Subtle Horizontal Gridlines */}
+          {[0, 0.33, 0.66, 1.0].map((frac, i) => {
             const y = padding.top + plotH * (1 - frac);
             const val = Math.round(minVal + frac * (maxVal - minVal));
             return (
@@ -131,13 +141,15 @@ function MultiLineChart({
                   y1={y}
                   x2={width - padding.right}
                   y2={y}
-                  className="chart-grid-line"
+                  stroke="#e2e8f0"
+                  strokeWidth={1}
+                  strokeDasharray="2 3"
                 />
                 <text
-                  x={padding.left - 6}
+                  x={padding.left - 4}
                   y={y + 3}
                   textAnchor="end"
-                  className="text-[9px] fill-slate-400 font-mono-tech"
+                  className="text-[8px] fill-slate-400 font-mono-tech tabular-nums"
                 >
                   {val}
                 </text>
@@ -146,45 +158,29 @@ function MultiLineChart({
           })}
 
           {/* Caution Threshold Line */}
-          {cautionY && (
-            <g>
-              <line
-                x1={padding.left}
-                y1={cautionY}
-                x2={width - padding.right}
-                y2={cautionY}
-                className="chart-threshold-caution"
-              />
-              <text
-                x={width - padding.right}
-                y={cautionY - 3}
-                textAnchor="end"
-                className="text-[8px] fill-amber-500 font-bold"
-              >
-                CAUTION ({cautionThresh})
-              </text>
-            </g>
+          {cautionY !== null && (
+            <line
+              x1={padding.left}
+              y1={cautionY}
+              x2={width - padding.right}
+              y2={cautionY}
+              stroke="#f59e0b"
+              strokeWidth={1}
+              strokeDasharray="3 3"
+            />
           )}
 
           {/* Critical Threshold Line */}
-          {criticalY && (
-            <g>
-              <line
-                x1={padding.left}
-                y1={criticalY}
-                x2={width - padding.right}
-                y2={criticalY}
-                className="chart-threshold-critical"
-              />
-              <text
-                x={width - padding.right}
-                y={criticalY - 3}
-                textAnchor="end"
-                className="text-[8px] fill-red-500 font-bold"
-              >
-                CRITICAL ({criticalThresh})
-              </text>
-            </g>
+          {criticalY !== null && (
+            <line
+              x1={padding.left}
+              y1={criticalY}
+              x2={width - padding.right}
+              y2={criticalY}
+              stroke="#ef4444"
+              strokeWidth={1}
+              strokeDasharray="3 3"
+            />
           )}
 
           {/* Data Series Paths */}
@@ -199,12 +195,12 @@ function MultiLineChart({
                 strokeWidth={isHighlighted ? 2.5 : 1.6}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                opacity={highlightKey && !isHighlighted ? 0.35 : 1.0}
+                opacity={highlightKey && !isHighlighted ? 0.3 : 1.0}
               />
             );
           })}
 
-          {/* X-axis base */}
+          {/* X-axis baseline */}
           <line
             x1={padding.left}
             y1={height - padding.bottom}
@@ -213,14 +209,6 @@ function MultiLineChart({
             stroke="#cbd5e1"
             strokeWidth={1}
           />
-          <text
-            x={width - padding.right}
-            y={height - 5}
-            textAnchor="end"
-            className="text-[9px] fill-slate-400 font-mono-tech"
-          >
-            T (sec) ──▶
-          </text>
         </svg>
       </div>
     </div>
@@ -236,49 +224,48 @@ function ElectricalBusSection({ packet }: { packet: LiveTelemetryPacket | null }
   const a2 = packet?.channels?.amp2 ?? 31.8;
 
   return (
-    <div className="aero-panel p-3.5 space-y-2.5">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+    <div className="aero-panel p-3 space-y-2 select-none">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
         <div className="flex items-center gap-2">
-          <div className="p-1 rounded bg-amber-50 text-amber-600 border border-amber-100">
+          <div className="p-1 rounded bg-amber-50 text-amber-600 border border-amber-100 shrink-0">
             <Zap className="w-3.5 h-3.5" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-slate-800 tracking-tight">28V DC Electrical Generation</h3>
-            <p className="text-[10px] text-slate-400">Dual Alternator / Bus Load Distribution</p>
+            <h3 className="text-xs font-bold text-slate-800 tracking-tight leading-none">28V DC Electrical Generation</h3>
+            <p className="text-[10px] text-slate-400 leading-tight mt-0.5">Dual Alternator / Bus Load Distribution</p>
           </div>
         </div>
-        <span className="text-[10px] font-mono-tech px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
-          AVIONICS POWER: NOMINAL
+        <span className="text-[9px] font-mono-tech px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+          28V REGULATED
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2.5">
         {/* Bus 1 */}
-        <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 space-y-1.5">
+        <div className="p-2 rounded bg-slate-50 border border-slate-200/80 space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-700">BUS 1 (PRIMARY)</span>
-            <span className={`text-xs font-mono-tech font-bold ${v1 < 26 ? "text-red-600" : "text-sky-700"}`}>
+            <span className="text-[10px] font-bold text-slate-700">BUS 1 (PRIMARY)</span>
+            <span className={`text-xs font-mono-tech font-bold tabular-nums ${v1 < 26 ? "text-red-600" : "text-sky-700"}`}>
               {v1.toFixed(1)} V
             </span>
           </div>
-          {/* Voltage visual bar */}
           <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
             <div
               className={`h-full transition-all duration-200 ${v1 < 26 ? "bg-red-500" : "bg-sky-500"}`}
               style={{ width: `${Math.min(100, Math.max(0, ((v1 - 22) / (32 - 22)) * 100))}%` }}
             />
           </div>
-          <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono-tech">
+          <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono-tech">
             <span>Load: {Math.round(a1)} A</span>
-            <span>24V - 30V Reg</span>
+            <span>24 - 30V OK</span>
           </div>
         </div>
 
         {/* Bus 2 */}
-        <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 space-y-1.5">
+        <div className="p-2 rounded bg-slate-50 border border-slate-200/80 space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-700">BUS 2 (ESSENTIAL)</span>
-            <span className={`text-xs font-mono-tech font-bold ${v2 < 26 ? "text-red-600" : "text-sky-700"}`}>
+            <span className="text-[10px] font-bold text-slate-700">BUS 2 (ESSENTIAL)</span>
+            <span className={`text-xs font-mono-tech font-bold tabular-nums ${v2 < 26 ? "text-red-600" : "text-sky-700"}`}>
               {v2.toFixed(1)} V
             </span>
           </div>
@@ -288,9 +275,9 @@ function ElectricalBusSection({ packet }: { packet: LiveTelemetryPacket | null }
               style={{ width: `${Math.min(100, Math.max(0, ((v2 - 22) / (32 - 22)) * 100))}%` }}
             />
           </div>
-          <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono-tech">
+          <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono-tech">
             <span>Load: {Math.round(a2)} A</span>
-            <span>24V - 30V Reg</span>
+            <span>24 - 30V OK</span>
           </div>
         </div>
       </div>
@@ -304,23 +291,20 @@ export function TelemetryCharts({
   packet,
   history,
   selectedCylinder,
-  onSelectCylinder: _onSelectCylinder,
+  onSelectCylinder,
 }: TelemetryChartsProps) {
-  // CHT Series Definition
   const chtSeries: SeriesConfig[] = [
     { key: "E1_CHT1", name: "Cyl 1", color: "#0284c7", unit: "°C" },
-    { key: "E1_CHT2", name: "Cyl 2", color: "#ea580c", unit: "°C" }, // Saffron
-    { key: "E1_CHT3", name: "Cyl 3", color: "#059669", unit: "°C" }, // Emerald
-    { key: "E1_CHT4", name: "Cyl 4", color: "#6366f1", unit: "°C" }, // Indigo
+    { key: "E1_CHT2", name: "Cyl 2", color: "#ea580c", unit: "°C" },
+    { key: "E1_CHT3", name: "Cyl 3", color: "#059669", unit: "°C" },
+    { key: "E1_CHT4", name: "Cyl 4", color: "#6366f1", unit: "°C" },
   ];
 
-  // Oil Series Definition
   const oilSeries: SeriesConfig[] = [
     { key: "E1_OilT", name: "Oil Temp", color: "#dc2626", unit: "°C" },
     { key: "E1_OilP", name: "Oil Press", color: "#0284c7", unit: "psi" },
   ];
 
-  // EGT Series Definition
   const egtSeries: SeriesConfig[] = [
     { key: "E1_EGT1", name: "EGT 1", color: "#0284c7", unit: "°C" },
     { key: "E1_EGT2", name: "EGT 2", color: "#ea580c", unit: "°C" },
@@ -330,12 +314,21 @@ export function TelemetryCharts({
 
   const highlightChannel = selectedCylinder ? `CHT${selectedCylinder}` : null;
 
+  const handleCylinderBadgeClick = (key: string) => {
+    if (!onSelectCylinder) return;
+    const match = key.match(/CHT(\d)/);
+    if (match) {
+      const cyl = parseInt(match[1], 10);
+      onSelectCylinder(cyl);
+    }
+  };
+
   return (
-    <div className="space-y-3 custom-scrollbar overflow-y-auto pr-1 pb-4">
+    <div className="space-y-2.5">
       {/* 1. CHT 4-Cylinder Thermal Plot */}
       <MultiLineChart
-        title="Cylinder Head Temperature (CHT1 - CHT4)"
-        subtitle="Lycoming IO-360 Cylinder Head Thermal Gradient"
+        title="Cylinder Head Temperatures (CHT1 - CHT4)"
+        subtitle="Horizontally-Opposed 4-Cylinder Thermal Gradient"
         icon={Flame}
         series={chtSeries}
         history={history}
@@ -344,11 +337,12 @@ export function TelemetryCharts({
         cautionThresh={200}
         criticalThresh={230}
         highlightKey={highlightChannel}
+        onBadgeClick={handleCylinderBadgeClick}
       />
 
       {/* 2. Oil System Coupled Dynamics */}
       <MultiLineChart
-        title="Engine Lubrication & Oil Dynamics"
+        title="Engine Lubrication Dynamics"
         subtitle="E1_OilT (°C) vs E1_OilP (psi) Viscosity Coupling"
         icon={Droplets}
         series={oilSeries}
@@ -360,8 +354,8 @@ export function TelemetryCharts({
 
       {/* 3. EGT Exhaust Gas Temperatures */}
       <MultiLineChart
-        title="Exhaust Gas Temperature (EGT1 - EGT4)"
-        subtitle="Combustion Efficiency & Mixture Distribution"
+        title="Exhaust Gas Temperatures (EGT1 - EGT4)"
+        subtitle="Combustion Distribution Across Exhaust Runners"
         icon={Activity}
         series={egtSeries}
         history={history}

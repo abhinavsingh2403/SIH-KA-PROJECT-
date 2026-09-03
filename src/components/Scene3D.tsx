@@ -1,6 +1,6 @@
 import { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Float } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { type LiveTelemetryPacket } from "../types/telemetry";
 
@@ -352,7 +352,7 @@ export function Scene3D({
   const activePalette = PALETTES[config.paletteKey] || PALETTES.isro;
 
   return (
-    <div className="w-full h-full relative overflow-hidden rounded-xl bg-slate-100 border border-slate-200 shadow-inner">
+    <div className="w-full h-full relative overflow-hidden bg-slate-100">
       <Canvas
         camera={{ position: [5.2, 3.6, 5.8], fov: 38 }}
         dpr={[1, 2]}
@@ -372,14 +372,12 @@ export function Scene3D({
         {/* Test Cell Ground Bench Grid */}
         <gridHelper args={[24, 24, "#94a3b8", "#cbd5e1"]} position={[0, -1.8, 0]} />
 
-        {/* 4-Cylinder Aero Engine Digital Twin */}
-        <Float speed={1.0} rotationIntensity={0.08} floatIntensity={0.15}>
-          <AeroPistonEngine
-            config={config}
-            livePacket={livePacket}
-            onSelectCylinder={onSelectCylinder}
-          />
-        </Float>
+        {/* 4-Cylinder Aero Engine Digital Twin (Rigidly Mounted) */}
+        <AeroPistonEngine
+          config={config}
+          livePacket={livePacket}
+          onSelectCylinder={onSelectCylinder}
+        />
 
         {/* Orbit Camera Controls */}
         <OrbitControls

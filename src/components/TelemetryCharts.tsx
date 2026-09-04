@@ -51,12 +51,33 @@ function MultiLineChart({
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Use a fixed buffer length of 35 points to eliminate stretching and shaking
+  // Smooth Catmull-Rom spline / Cubic Bezier curve algorithm
+  const generateSmoothPath = (pts: [number, number][]) => {
+    if (pts.length < 2) return "";
+    let d = `M ${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i === 0 ? 0 : i - 1];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[i + 2 < pts.length ? i + 2 : i + 1];
+
+      // Catmull-Rom to Cubic Bezier control points (tension = 0.5)
+      const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+      const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+      const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+      const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+
+      d += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    return d;
+  };
+
+  // Fixed buffer length with smooth Catmull-Rom Bezier curves
   const paths = useMemo(() => {
     if (history.length < 2) return [];
 
     return series.map((s) => {
-      const pts: string[] = [];
+      const ptTuples: [number, number][] = [];
       const len = history.length;
 
       for (let i = 0; i < len; i++) {
@@ -65,25 +86,26 @@ function MultiLineChart({
         const rawVal = pkt?.channels?.[s.key] ?? minVal;
         const clamped = Math.max(minVal, Math.min(maxVal, rawVal));
         const y = padding.top + plotH - ((clamped - minVal) / (maxVal - minVal)) * plotH;
-        pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+        ptTuples.push([x, y]);
       }
+
+      const smoothLineD = generateSmoothPath(ptTuples);
+      const firstX = ptTuples[0][0].toFixed(1);
+      const lastX = ptTuples[ptTuples.length - 1][0].toFixed(1);
+      const bottomY = (padding.top + plotH).toFixed(1);
+      const smoothAreaD = `${smoothLineD} L ${lastX},${bottomY} L ${firstX},${bottomY} Z`;
 
       const lastVal = history[history.length - 1]?.channels?.[s.key] ?? minVal;
       const hoveredVal = hoverIndex !== null && history[hoverIndex]
         ? history[hoverIndex]?.channels?.[s.key] ?? lastVal
         : lastVal;
 
-      const firstPt = pts[0];
-      const lastPt = pts[pts.length - 1];
-      const bottomY = (padding.top + plotH).toFixed(1);
-      const areaPath = `M ${pts.join(" L ")} L ${lastPt.split(",")[0]},${bottomY} L ${firstPt.split(",")[0]},${bottomY} Z`;
-
       return {
         key: s.key,
         name: s.name,
         color: s.color,
-        d: `M ${pts.join(" L ")}`,
-        areaD: areaPath,
+        d: smoothLineD,
+        areaD: smoothAreaD,
         currentVal: hoveredVal,
       };
     });
@@ -380,22 +402,22 @@ export function TelemetryCharts({
   onSelectCylinder,
 }: TelemetryChartsProps) {
   const chtSeries: SeriesConfig[] = [
-    { key: "E1_CHT1", name: "Cyl 1", color: "#0284c7", unit: "°C" },
-    { key: "E1_CHT2", name: "Cyl 2", color: "#ea580c", unit: "°C" },
-    { key: "E1_CHT3", name: "Cyl 3", color: "#059669", unit: "°C" },
-    { key: "E1_CHT4", name: "Cyl 4", color: "#6366f1", unit: "°C" },
+    { key: "E1_CHT1", name: "Cyl 1", color: "#FF681F", unit: "°C" }, // SIH Saffron Orange
+    { key: "E1_CHT2", name: "Cyl 2", color: "#E11D48", unit: "°C" }, // Thermal Rose/Red
+    { key: "E1_CHT3", name: "Cyl 3", color: "#0B8F46", unit: "°C" }, // SIH Emerald Green
+    { key: "E1_CHT4", name: "Cyl 4", color: "#0284C7", unit: "°C" }, // Tech Azure
   ];
 
   const oilSeries: SeriesConfig[] = [
-    { key: "E1_OilT", name: "Oil Temp", color: "#dc2626", unit: "°C" },
-    { key: "E1_OilP", name: "Oil Press", color: "#0284c7", unit: "psi" },
+    { key: "E1_OilT", name: "Oil Temp", color: "#FF681F", unit: "°C" },
+    { key: "E1_OilP", name: "Oil Press", color: "#0B8F46", unit: "psi" },
   ];
 
   const egtSeries: SeriesConfig[] = [
-    { key: "E1_EGT1", name: "EGT 1", color: "#0284c7", unit: "°C" },
-    { key: "E1_EGT2", name: "EGT 2", color: "#ea580c", unit: "°C" },
-    { key: "E1_EGT3", name: "EGT 3", color: "#059669", unit: "°C" },
-    { key: "E1_EGT4", name: "EGT 4", color: "#6366f1", unit: "°C" },
+    { key: "E1_EGT1", name: "EGT 1", color: "#FF681F", unit: "°C" },
+    { key: "E1_EGT2", name: "EGT 2", color: "#E11D48", unit: "°C" },
+    { key: "E1_EGT3", name: "EGT 3", color: "#0B8F46", unit: "°C" },
+    { key: "E1_EGT4", name: "EGT 4", color: "#0284C7", unit: "°C" },
   ];
 
   const highlightChannel = selectedCylinder ? `CHT${selectedCylinder}` : null;

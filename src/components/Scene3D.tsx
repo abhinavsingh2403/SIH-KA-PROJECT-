@@ -671,10 +671,10 @@ export function Scene3D({
           ref={controlsRef}
           makeDefault
           enableDamping
-          dampingFactor={0.06}
-          rotateSpeed={0.8}
-          panSpeed={0.8}
-          zoomSpeed={0.9}
+          dampingFactor={0.045}
+          rotateSpeed={0.7}
+          panSpeed={0.7}
+          zoomSpeed={0.85}
           target={[0, 0, 0]}
           autoRotate={config.autoRotate}
           autoRotateSpeed={config.rotationSpeed}

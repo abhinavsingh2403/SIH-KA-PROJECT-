@@ -2,33 +2,41 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #F7F7F5;
+  --bg: #F8F9FA;
   --panel: #FFFFFF;
-  --panel2: #F1F1EE;
-  --line: #E4E3DD;
-  --line-strong: #CFCDC4;
-  --text: #1B1F27;
-  --text-dim: #63697A;
-  --text-faint: #9498A3;
+  --panel2: #F1F3F5;
+  --line: #E2E6EA;
+  --line-strong: #CED4DA;
+  --text: #1E293B;
+  --text-dim: #475569;
+  --text-faint: #64748B;
 
-  --ochre: #B5730A;
-  --ochre-bg: #FBF1DE;
-  --teal: #0F6E56;
-  --teal-bg: #E4F1EC;
-  --green: #2F7D4F;
-  --green-bg: #E9F5EE;
-  --red: #B23A2E;
-  --red-bg: #FBEAE8;
-  --amber: #A16207;
-  --amber-bg: #FEF3C7;
+  /* SIH 2026 Innovation Palette (Orange, Emerald, Slate) */
+  --sih-orange: #FF681F;
+  --sih-orange-bg: #FFF4ED;
+  --sih-green: #0B8F46;
+  --sih-green-bg: #EAF7EF;
+  --sih-slate: #2F3E46;
+
+  --ochre: #FF681F;
+  --ochre-bg: #FFF4ED;
+  --teal: #0B8F46;
+  --teal-bg: #EAF7EF;
+  --green: #0B8F46;
+  --green-bg: #EAF7EF;
+  --red: #DC2626;
+  --red-bg: #FEE2E2;
+  --amber: #EA580C;
+  --amber-bg: #FFEDD5;
 
   /* Elevation shadows — military GCS depth layers */
-  --shadow-1: 0 1px 2px rgba(27, 31, 39, 0.04), 0 1px 3px rgba(27, 31, 39, 0.06);
-  --shadow-2: 0 2px 6px rgba(27, 31, 39, 0.06), 0 4px 12px rgba(27, 31, 39, 0.04);
-  --shadow-3: 0 8px 24px rgba(27, 31, 39, 0.12), 0 2px 8px rgba(27, 31, 39, 0.06);
+  --shadow-1: 0 1px 2px rgba(30, 41, 59, 0.04), 0 1px 3px rgba(30, 41, 59, 0.06);
+  --shadow-2: 0 2px 6px rgba(30, 41, 59, 0.06), 0 4px 12px rgba(30, 41, 59, 0.04);
+  --shadow-3: 0 8px 24px rgba(30, 41, 59, 0.12), 0 2px 8px rgba(30, 41, 59, 0.06);
 
-  /* Spring physics timing */
-  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Spring physics timing — ultra-smooth interactive response */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html, body, #root {
@@ -64,6 +72,18 @@ html, body, #root {
   background: var(--panel);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-2);
+  position: relative;
+}
+.dt-panel-elevated::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: linear-gradient(90deg, #FF681F 0%, #FF9933 45%, #FFFFFF 50%, #138808 55%, #0B8F46 100%);
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
 }
 
 /* ===== Custom Scrollbar ===== */
@@ -99,18 +119,33 @@ html, body, #root {
 .view-tab {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 11.5px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-dim);
   background: var(--panel2);
   border: 1px solid var(--line);
-  padding: 6px 12px;
+  padding: 6px 14px;
   cursor: pointer;
   transition: all 0.12s var(--ease-spring);
   user-select: none;
+  position: relative;
 }
-.view-tab:hover { color: var(--text); border-color: var(--line-strong); }
+.view-tab:hover { color: var(--text); border-color: var(--line-strong); background: var(--panel); }
 .view-tab:active { transform: scale(0.97); }
-.view-tab.active { background: var(--text); color: var(--panel); border-color: var(--text); }
+.view-tab.active {
+  background: var(--sih-slate);
+  color: #FFFFFF;
+  border-color: var(--sih-slate);
+  box-shadow: 0 2px 6px rgba(47, 62, 70, 0.18);
+}
+.view-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--sih-orange);
+}
 .view-tab:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
 
 /* ===== Speed Button ===== */
@@ -286,8 +321,8 @@ input[type="range"].gcs-slider::-moz-range-thumb {
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
-  background: var(--teal);
+  height: 2.5px;
+  background: linear-gradient(90deg, #FF681F 0%, #FF9933 45%, #FFFFFF 50%, #138808 55%, #0B8F46 100%);
 }
 
 /* ===== Alternating Row Tint (Residuals Grid) ===== */

@@ -666,8 +666,8 @@ export function Dashboard({
 
         <div className="flex-1 flex items-center" style={{ gap: 10 }}>
           <div className="flex-1 relative" style={{ height: 4, background: "var(--panel2)", border: "1px solid var(--line)" }}>
-            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${progressPct}%`, background: "var(--teal)", transition: isSeeking ? "none" : "width 0.3s" }} />
-            <div style={{ position: "absolute", left: `${progressPct}%`, top: "50%", transform: "translate(-50%, -50%)", width: 10, height: 10, background: "var(--teal)", cursor: "grab", transition: isSeeking ? "none" : "left 0.3s" }} />
+            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${progressPct}%`, background: "var(--teal)", transition: isSeeking ? "none" : "width 0.25s cubic-bezier(0.4, 0, 0.2, 1)" }} />
+            <div style={{ position: "absolute", left: `${progressPct}%`, top: "50%", transform: "translate(-50%, -50%)", width: 10, height: 10, background: "var(--teal)", cursor: "grab", transition: isSeeking ? "none" : "left 0.25s cubic-bezier(0.4, 0, 0.2, 1)" }} />
             <input
               type="range" min={0} max={totalFlightTime} step={1}
               value={Math.round(displayFlightTime)}

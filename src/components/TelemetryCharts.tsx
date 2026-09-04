@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useLayoutEffect } from "react";
 import { type LiveTelemetryPacket, type SensorChannel } from "../types/telemetry";
 import {
   CylinderCombustionIcon,
@@ -46,15 +46,67 @@ function MultiLineChart({
   highlightKey?: string | null;
   onBadgeClick?: (key: string) => void;
 }) {
-  const width = 420;
-  const height = 110;
-  const padding = { top: 10, right: 12, bottom: 18, left: 34 };
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(700);
 
-  const plotW = width - padding.left - padding.right;
-  const plotH = height - padding.top - padding.bottom;
+  useLayoutEffect(() => {
+    if (!containerRef.current) return;
+    const updateWidth = () => {
+      if (containerRef.current) {
+        const w = containerRef.current.clientWidth;
+        if (w > 0) setContainerWidth(w);
+      }
+    };
+    updateWidth();
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect.width > 0) {
+          setContainerWidth(Math.round(entry.contentRect.width));
+        }
+      }
+    });
+    ro.observe(containerRef.current);
+    window.addEventListener("resize", updateWidth);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", updateWidth);
+    };
+  }, []);
+
+  const width = containerWidth || 700;
+  const height = 115;
+  const padding = { top: 12, right: 16, bottom: 20, left: 44 };
+
+  const plotW = Math.max(10, width - padding.left - padding.right);
+  const plotH = Math.max(10, height - padding.top - padding.bottom);
 
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Calculate dynamic min/max with head-room padding so curves span the full height
+  const [effectiveMin, effectiveMax] = useMemo(() => {
+    if (!history.length) return [minVal, maxVal];
+    let low = Infinity;
+    let high = -Infinity;
+    series.forEach((s) => {
+      history.forEach((pkt) => {
+        const v = pkt?.channels?.[s.key];
+        if (typeof v === "number" && !isNaN(v)) {
+          if (v < low) low = v;
+          if (v > high) high = v;
+        }
+      });
+    });
+    if (cautionThresh) high = Math.max(high, cautionThresh);
+    if (criticalThresh) high = Math.max(high, criticalThresh);
+
+    if (low === Infinity || high === -Infinity || high <= low) {
+      return [minVal, maxVal];
+    }
+    const range = high - low;
+    const padBottom = Math.max(2, range * 0.2);
+    const padTop = Math.max(3, range * 0.2);
+    return [Math.floor(low - padBottom), Math.ceil(high + padTop)];
+  }, [history, series, minVal, maxVal, cautionThresh, criticalThresh]);
 
   // Smooth Catmull-Rom spline / Cubic Bezier curve algorithm
   const generateSmoothPath = (pts: [number, number][]) => {
@@ -88,19 +140,20 @@ function MultiLineChart({
       for (let i = 0; i < len; i++) {
         const pkt = history[i];
         const x = padding.left + (i / Math.max(1, len - 1)) * plotW;
-        const rawVal = pkt?.channels?.[s.key] ?? minVal;
-        const clamped = Math.max(minVal, Math.min(maxVal, rawVal));
-        const y = padding.top + plotH - ((clamped - minVal) / (maxVal - minVal)) * plotH;
+        const rawVal = pkt?.channels?.[s.key] ?? effectiveMin;
+        const clamped = Math.max(effectiveMin, Math.min(effectiveMax, rawVal));
+        const y = padding.top + plotH - ((clamped - effectiveMin) / Math.max(1, effectiveMax - effectiveMin)) * plotH;
         ptTuples.push([x, y]);
       }
 
       const smoothLineD = generateSmoothPath(ptTuples);
       const firstX = ptTuples[0][0].toFixed(1);
-      const lastX = ptTuples[ptTuples.length - 1][0].toFixed(1);
+      const lastPt = ptTuples[ptTuples.length - 1];
+      const lastX = lastPt[0].toFixed(1);
       const bottomY = (padding.top + plotH).toFixed(1);
       const smoothAreaD = `${smoothLineD} L ${lastX},${bottomY} L ${firstX},${bottomY} Z`;
 
-      const lastVal = history[history.length - 1]?.channels?.[s.key] ?? minVal;
+      const lastVal = history[history.length - 1]?.channels?.[s.key] ?? effectiveMin;
       const hoveredVal = hoverIndex !== null && history[hoverIndex]
         ? history[hoverIndex]?.channels?.[s.key] ?? lastVal
         : lastVal;
@@ -112,15 +165,16 @@ function MultiLineChart({
         d: smoothLineD,
         areaD: smoothAreaD,
         currentVal: hoveredVal,
+        lastPt,
       };
     });
-  }, [history, series, minVal, maxVal, plotW, plotH, padding.left, padding.top, hoverIndex]);
+  }, [history, series, effectiveMin, effectiveMax, plotW, plotH, padding.left, padding.top, hoverIndex]);
 
-  const cautionY = cautionThresh
-    ? padding.top + plotH - ((cautionThresh - minVal) / (maxVal - minVal)) * plotH
+  const cautionY = cautionThresh && cautionThresh >= effectiveMin && cautionThresh <= effectiveMax
+    ? padding.top + plotH - ((cautionThresh - effectiveMin) / Math.max(1, effectiveMax - effectiveMin)) * plotH
     : null;
-  const criticalY = criticalThresh
-    ? padding.top + plotH - ((criticalThresh - minVal) / (maxVal - minVal)) * plotH
+  const criticalY = criticalThresh && criticalThresh >= effectiveMin && criticalThresh <= effectiveMax
+    ? padding.top + plotH - ((criticalThresh - effectiveMin) / Math.max(1, effectiveMax - effectiveMin)) * plotH
     : null;
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -145,12 +199,12 @@ function MultiLineChart({
     : null;
 
   return (
-    <div className="dt-panel p-3.5 space-y-2.5 select-none" style={{ background: "var(--panel)", borderColor: "var(--line)" }}>
-      {/* Header with Fixed-Width Indicators to prevent horizontal shaking */}
-      <div className="flex items-center justify-between pb-2" style={{ borderBottom: "1px solid var(--line)" }}>
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-none shrink-0" style={{ background: "var(--panel2)", border: "1px solid var(--line-strong)", color: "var(--teal)" }}>
-            <Icon className="w-3.5 h-3.5" />
+    <div className="dt-panel p-3.5 space-y-2 select-none" style={{ background: "var(--panel)", borderColor: "var(--line)" }}>
+      {/* Header with Fixed-Width Indicators */}
+      <div className="flex items-center justify-between pb-1.5" style={{ borderBottom: "1px solid var(--line)" }}>
+        <div className="flex items-center gap-2.5">
+          <div className="p-1 rounded-sm shrink-0 flex items-center justify-center" style={{ background: "var(--panel2)", color: "var(--teal)" }}>
+            <Icon className="w-4 h-4" />
           </div>
           <div>
             <h3 className="text-[12px] font-bold tracking-tight leading-none truncate max-w-[210px]" style={{ color: "var(--text)" }}>{title}</h3>
@@ -166,7 +220,7 @@ function MultiLineChart({
               <button
                 key={p.key}
                 onClick={() => onBadgeClick?.(p.key)}
-                className="flex items-center gap-1.5 text-[10px] px-2 py-0.5 transition-all cursor-pointer font-mono-tech"
+                className="flex items-center gap-1.5 text-[10px] px-2 py-0.5 transition-all cursor-pointer font-mono-tech rounded-none"
                 style={{
                   background: isHighlighted ? "var(--text)" : "var(--panel2)",
                   color: isHighlighted ? "var(--panel)" : "var(--text-dim)",
@@ -174,7 +228,7 @@ function MultiLineChart({
                 }}
               >
                 <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: p.color, boxShadow: `0 0 6px ${p.color}` }} />
-                <span className="font-semibold">{p.name.split(" ")[0]}</span>
+                <span className="font-semibold">{p.name}</span>
                 <span className="font-bold w-8 text-right inline-block tabular-nums" style={{ color: isHighlighted ? "var(--panel)" : "var(--text)" }}>
                   {Math.round(p.currentVal)}
                 </span>
@@ -184,32 +238,33 @@ function MultiLineChart({
         </div>
       </div>
 
-      {/* SVG Chart Canvas with FIXED height to prevent vertical jitter */}
+      {/* SVG Chart Canvas */}
       <div
         ref={containerRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        className="relative w-full h-[105px] overflow-hidden cursor-crosshair"
-        style={{ background: "var(--panel2)", border: "1px solid var(--line)" }}
+        className="relative w-full h-[115px] overflow-hidden cursor-crosshair rounded-none"
+        style={{ background: "#FFFFFF", border: "1px solid var(--line)" }}
       >
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-full block"
           preserveAspectRatio="none"
+          className="w-full h-full block"
         >
           <defs>
             {paths.map((p) => (
               <linearGradient key={`grad-${p.key}`} id={`grad-${p.key}`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={p.color} stopOpacity="0.22" />
+                <stop offset="60%" stopColor={p.color} stopOpacity="0.06" />
                 <stop offset="100%" stopColor={p.color} stopOpacity="0.0" />
               </linearGradient>
             ))}
           </defs>
 
-          {/* Subtle Horizontal Gridlines */}
-          {[0, 0.33, 0.66, 1.0].map((frac, i) => {
+          {/* Subtle Horizontal Gridlines & Upright Numbers */}
+          {[0, 0.25, 0.5, 0.75, 1.0].map((frac, i) => {
             const y = padding.top + plotH * (1 - frac);
-            const val = Math.round(minVal + frac * (maxVal - minVal));
+            const val = Math.round(effectiveMin + frac * (effectiveMax - effectiveMin));
             return (
               <g key={i}>
                 <line
@@ -217,16 +272,22 @@ function MultiLineChart({
                   y1={y}
                   x2={width - padding.right}
                   y2={y}
-                  stroke="var(--line)"
+                  stroke="#E2E6EA"
                   strokeWidth={1}
                   strokeDasharray="2 3"
                 />
                 <text
-                  x={padding.left - 4}
+                  x={padding.left - 6}
                   y={y + 3}
                   textAnchor="end"
-                  className="font-mono-tech tabular-nums"
-                  style={{ fill: "var(--text-faint)", fontSize: "8.5px" }}
+                  style={{
+                    fill: "#64748B",
+                    fontSize: "9px",
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontStyle: "normal",
+                    fontWeight: 500,
+                    letterSpacing: "0px",
+                  }}
                 >
                   {val}
                 </text>
@@ -234,33 +295,55 @@ function MultiLineChart({
             );
           })}
 
-          {/* Caution Threshold Line */}
+          {/* Caution Threshold Line & Indicator Label */}
           {cautionY !== null && (
-            <line
-              x1={padding.left}
-              y1={cautionY}
-              x2={width - padding.right}
-              y2={cautionY}
-              stroke="var(--amber)"
-              strokeWidth={1}
-              strokeDasharray="3 3"
-            />
+            <g>
+              <line
+                x1={padding.left}
+                y1={cautionY}
+                x2={width - padding.right}
+                y2={cautionY}
+                stroke="#FF681F"
+                strokeWidth={1.2}
+                strokeDasharray="3 3"
+              />
+              <text
+                x={width - padding.right - 2}
+                y={cautionY - 3}
+                textAnchor="end"
+                className="font-mono-tech"
+                style={{ fill: "#FF681F", fontSize: "7.5px", fontWeight: 700 }}
+              >
+                WARN {cautionThresh}
+              </text>
+            </g>
           )}
 
-          {/* Critical Threshold Line */}
+          {/* Critical Threshold Line & Indicator Label */}
           {criticalY !== null && (
-            <line
-              x1={padding.left}
-              y1={criticalY}
-              x2={width - padding.right}
-              y2={criticalY}
-              stroke="var(--red)"
-              strokeWidth={1}
-              strokeDasharray="3 3"
-            />
+            <g>
+              <line
+                x1={padding.left}
+                y1={criticalY}
+                x2={width - padding.right}
+                y2={criticalY}
+                stroke="#DC2626"
+                strokeWidth={1.2}
+                strokeDasharray="3 3"
+              />
+              <text
+                x={width - padding.right - 2}
+                y={criticalY - 3}
+                textAnchor="end"
+                className="font-mono-tech"
+                style={{ fill: "#DC2626", fontSize: "7.5px", fontWeight: 700 }}
+              >
+                CRIT {criticalThresh}
+              </text>
+            </g>
           )}
 
-          {/* Area Fills under curves */}
+          {/* Luminous Area Fills: Smooth Glow Shading */}
           {paths.map((p) => {
             const isHighlighted = highlightKey ? p.key.includes(highlightKey) : false;
             return (
@@ -268,12 +351,12 @@ function MultiLineChart({
                 key={`area-${p.key}`}
                 d={p.areaD}
                 fill={`url(#grad-${p.key})`}
-                opacity={highlightKey && !isHighlighted ? 0.05 : 1.0}
+                opacity={highlightKey && !isHighlighted ? 0.08 : 0.8}
               />
             );
           })}
 
-          {/* Data Series Line Paths */}
+          {/* Data Series Line Paths: Professional Oscilloscope / Avionics MFD Traces */}
           {paths.map((p) => {
             const isHighlighted = highlightKey ? p.key.includes(highlightKey) : false;
             return (
@@ -282,11 +365,29 @@ function MultiLineChart({
                 d={p.d}
                 fill="none"
                 stroke={p.color}
-                strokeWidth={isHighlighted ? 2.5 : 1.6}
+                strokeWidth={isHighlighted ? 2.5 : 1.8}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                opacity={highlightKey && !isHighlighted ? 0.25 : 1.0}
+                opacity={highlightKey && !isHighlighted ? 0.22 : 1.0}
               />
+            );
+          })}
+
+          {/* Real-Time Glowing Lead Points on Curves */}
+          {paths.map((p) => {
+            if (!p.lastPt) return null;
+            const isHighlighted = highlightKey ? p.key.includes(highlightKey) : false;
+            return (
+              <g key={`lead-${p.key}`}>
+                <circle
+                  cx={p.lastPt[0]}
+                  cy={p.lastPt[1]}
+                  r={isHighlighted ? 3.5 : 2.5}
+                  fill={p.color}
+                  stroke="#FFFFFF"
+                  strokeWidth={1.5}
+                />
+              </g>
             );
           })}
 
@@ -311,7 +412,7 @@ function MultiLineChart({
             y1={height - padding.bottom}
             x2={width - padding.right}
             y2={height - padding.bottom}
-            stroke="#cbd5e1"
+            stroke="#CBD5E1"
             strokeWidth={1}
           />
         </svg>
@@ -331,9 +432,9 @@ function ElectricalBusSection({ packet }: { packet: LiveTelemetryPacket | null }
   return (
     <div className="dt-panel p-3.5 space-y-2.5 select-none" style={{ background: "var(--panel)", borderColor: "var(--line)" }}>
       <div className="flex items-center justify-between pb-2" style={{ borderBottom: "1px solid var(--line)" }}>
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-none shrink-0" style={{ background: "var(--panel2)", border: "1px solid var(--line-strong)", color: "var(--ochre)" }}>
-            <AlternatorDynamoIcon className="w-3.5 h-3.5" color="#FF681F" />
+        <div className="flex items-center gap-2.5">
+          <div className="p-1 rounded-sm shrink-0 flex items-center justify-center" style={{ background: "var(--panel2)", color: "var(--ochre)" }}>
+            <AlternatorDynamoIcon className="w-4 h-4" color="#FF681F" />
           </div>
           <div>
             <h3 className="text-[12px] font-bold tracking-tight leading-none" style={{ color: "var(--text)" }}>28V DC Electrical Generation</h3>

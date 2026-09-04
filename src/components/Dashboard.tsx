@@ -247,9 +247,10 @@ export function Dashboard({
         {/* Top Row */}
         <div className="flex items-center justify-between">
           {/* Brand */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <SihLogo className="w-10 h-10 shrink-0 drop-shadow-sm" />
+              <SihLogo className="h-10 shrink-0" />
+              <div className="divider-v" style={{ height: 32 }} />
               <div>
                 <div className="text-[16px] font-bold" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>DRDO MALE UAV Digital Twin</div>
                 <div className="font-mono-tech text-[10.5px]" style={{ color: "var(--text-faint)", letterSpacing: "0.02em" }}>AERO PISTON ENGINE · 15 CHANNELS · REAL-TIME</div>

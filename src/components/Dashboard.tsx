@@ -8,7 +8,6 @@ import {
   Users,
   Sliders,
   Send,
-  Sparkles,
   Database,
   CheckCircle2,
   FileText,
@@ -18,6 +17,13 @@ import {
 import { Scene3D, type SceneConfig } from "./Scene3D";
 import { TelemetryCharts } from "./TelemetryCharts";
 import { SihLogo } from "./SihLogo";
+import {
+  DebriefTacticalIcon,
+  DatabaseUplinkIcon,
+  FleetMeshIcon,
+  TacticalCopilotIcon,
+  MissionForecastIcon,
+} from "./AerospaceIcons";
 import { type LiveTelemetryPacket, type FederatedSummary } from "../types/telemetry";
 
 interface DashboardProps {
@@ -350,8 +356,26 @@ export function Dashboard({
               ))}
             </div>
           </div>
-          <div className="text-[11.5px]" style={{ color: "var(--text-dim)", marginBottom: 14 }}>
-            Horizontally-opposed 4-cylinder · {config.renderMode === "flir" ? "FLIR thermal" : config.renderMode === "xray" ? "X-Ray cutaway" : "CAD solid"} render
+          <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
+            <div className="text-[11.5px]" style={{ color: "var(--text-dim)" }}>
+              Horizontally-opposed 4-cylinder · {config.renderMode === "flir" ? "FLIR thermal" : config.renderMode === "xray" ? "X-Ray cutaway" : "CAD solid"} render
+            </div>
+
+            {/* Selected Cylinder Badge (Integrated into Header to prevent 3D canvas overlay collisions) */}
+            {config.selectedCylinder && (
+              <div className="flex items-center gap-1.5 font-mono-tech text-[10px] font-bold" style={{ color: "var(--teal)", border: "1px solid var(--teal)", background: "var(--teal-bg)", padding: "2px 8px" }}>
+                <span className="w-1.5 h-1.5 rounded-full beacon-pulse" style={{ background: "var(--teal)" }} />
+                FOCUS: CYL {config.selectedCylinder}
+                <button
+                  onClick={() => onChange({ selectedCylinder: null })}
+                  className="ml-1 cursor-pointer font-bold hover:opacity-80"
+                  style={{ color: "var(--red)" }}
+                  title="Clear Cylinder Focus"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
           </div>
 
           {/* 3D Canvas */}
@@ -399,14 +423,6 @@ export function Dashboard({
                 {config.explodedView ? "Exploded" : "Assembled"}
               </button>
             </div>
-
-            {/* Selected Cylinder Badge */}
-            {config.selectedCylinder && (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 font-mono-tech text-[10px] font-bold" style={{ color: "var(--teal)", border: "1px solid var(--teal)", background: "var(--teal-bg)", padding: "3px 10px" }}>
-                FOCUS: CYL {config.selectedCylinder}
-                <button onClick={() => onChange({ selectedCylinder: null })} className="ml-2 cursor-pointer" style={{ color: "var(--red)" }}>✕</button>
-              </div>
-            )}
           </div>
 
           {/* Fault Injection Row */}
@@ -491,22 +507,25 @@ export function Dashboard({
               <button
                 onClick={() => setShowDebriefModal(true)}
                 className="view-tab flex items-center gap-1.5"
+                title="DRDO Official Mission Sortie Debrief"
               >
-                <FileText className="w-3 h-3 text-slate-500" />
+                <DebriefTacticalIcon className="w-3.5 h-3.5" color="#FF681F" />
                 Debrief
               </button>
               <button
                 onClick={() => { loadSupabaseData(); setShowSupabaseModal(true); }}
                 className="view-tab flex items-center gap-1.5"
+                title="PostgreSQL / Supabase Real-Time Telemetry Storage"
               >
-                <Database className="w-3 h-3 text-slate-500" />
+                <DatabaseUplinkIcon className="w-3.5 h-3.5" color="#0B8F46" />
                 Database
               </button>
               <button
                 onClick={() => { onTriggerFederated(); setShowFleetModal(true); }}
                 className="view-tab flex items-center gap-1.5"
+                title="FedAvg Edge UAV Model Synchronization"
               >
-                <Users className="w-3 h-3 text-slate-500" />
+                <FleetMeshIcon className="w-3.5 h-3.5" color="#2F3E46" />
                 FedAvg
               </button>
             </div>
@@ -537,14 +556,24 @@ export function Dashboard({
                         border: msg.role === "user" ? "none" : "1px solid var(--line)",
                       }}
                     >
-                      <span className="block text-[10px] font-bold uppercase mb-1" style={{ opacity: 0.6 }}>
-                        {msg.role === "user" ? "Operator query" : "DRDO copilot engine"}
+                      <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase mb-1" style={{ opacity: 0.75 }}>
+                        {msg.role === "user" ? (
+                          "Operator Query"
+                        ) : (
+                          <>
+                            <TacticalCopilotIcon className="w-3 h-3" color="#0B8F46" />
+                            <span>DRDO Autonomous Copilot Engine</span>
+                          </>
+                        )}
                       </span>
                       {msg.text}
                     </div>
                   ))}
                   {isCopilotThinking && (
-                    <div className="font-mono-tech text-[12px] p-2" style={{ color: "var(--text-faint)" }}>Analyzing 15-channel engine twin telemetry...</div>
+                    <div className="font-mono-tech text-[11px] p-2 flex items-center gap-2" style={{ color: "var(--text-faint)" }}>
+                      <TacticalCopilotIcon className="w-3.5 h-3.5 beacon-pulse" color="#FF681F" />
+                      Analyzing 15-channel engine twin telemetry residuals...
+                    </div>
                   )}
                 </div>
 
@@ -576,7 +605,7 @@ export function Dashboard({
               <div className="space-y-4">
                 <div className="accent-left-bar accent-ochre" style={{ padding: "14px 16px 14px 18px", background: "var(--ochre-bg)", border: "1px solid var(--ochre)" }}>
                   <h3 className="text-[12px] font-semibold flex items-center gap-1.5" style={{ color: "var(--ochre)" }}>
-                    <Sparkles className="w-3.5 h-3.5" /> FORWARD MISSION SURVIVABILITY PROJECTION
+                    <MissionForecastIcon className="w-4 h-4" color="#FF681F" /> FORWARD MISSION SURVIVABILITY PROJECTION
                   </h3>
                   <p className="text-[11px] mt-1" style={{ color: "var(--text-dim)" }}>
                     Projects engine survivability across planned sortie duration based on current digital twin residuals.

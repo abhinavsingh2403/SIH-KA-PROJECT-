@@ -1,6 +1,11 @@
 import { useState, useMemo, useRef } from "react";
 import { type LiveTelemetryPacket, type SensorChannel } from "../types/telemetry";
-import { Flame, Zap, Activity, Droplets, type LucideIcon } from "lucide-react";
+import {
+  CylinderCombustionIcon,
+  LubricationCircuitIcon,
+  ExhaustManifoldIcon,
+  AlternatorDynamoIcon,
+} from "./AerospaceIcons";
 
 interface TelemetryChartsProps {
   packet: LiveTelemetryPacket | null;
@@ -31,7 +36,7 @@ function MultiLineChart({
 }: {
   title: string;
   subtitle: string;
-  icon: LucideIcon;
+  icon: React.ComponentType<{ className?: string; color?: string }>;
   series: SeriesConfig[];
   history: LiveTelemetryPacket[];
   minVal: number;
@@ -328,7 +333,7 @@ function ElectricalBusSection({ packet }: { packet: LiveTelemetryPacket | null }
       <div className="flex items-center justify-between pb-2" style={{ borderBottom: "1px solid var(--line)" }}>
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-none shrink-0" style={{ background: "var(--panel2)", border: "1px solid var(--line-strong)", color: "var(--ochre)" }}>
-            <Zap className="w-3.5 h-3.5" />
+            <AlternatorDynamoIcon className="w-3.5 h-3.5" color="#FF681F" />
           </div>
           <div>
             <h3 className="text-[12px] font-bold tracking-tight leading-none" style={{ color: "var(--text)" }}>28V DC Electrical Generation</h3>
@@ -437,7 +442,7 @@ export function TelemetryCharts({
       <MultiLineChart
         title="Cylinder Head Temps (CHT 1–4)"
         subtitle="Horizontally-Opposed Boxer Thermal Gradient"
-        icon={Flame}
+        icon={CylinderCombustionIcon}
         series={chtSeries}
         history={history}
         minVal={100}
@@ -452,7 +457,7 @@ export function TelemetryCharts({
       <MultiLineChart
         title="Lubrication Dynamics (OilT / OilP)"
         subtitle="E1_OilT (°C) vs E1_OilP (psi) Coupled Margin"
-        icon={Droplets}
+        icon={LubricationCircuitIcon}
         series={oilSeries}
         history={history}
         minVal={30}
@@ -464,7 +469,7 @@ export function TelemetryCharts({
       <MultiLineChart
         title="Exhaust Gas Temps (EGT 1–4)"
         subtitle="Combustion Exhaust Distribution"
-        icon={Activity}
+        icon={ExhaustManifoldIcon}
         series={egtSeries}
         history={history}
         minVal={400}

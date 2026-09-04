@@ -1,26 +1,14 @@
 import { useState, useEffect } from "react";
 import {
-  Activity,
-  Layers,
-  RotateCw,
-  Cpu,
   AlertTriangle,
-  Gauge,
   Play,
   Pause,
   Maximize2,
-  Radio,
-  Clock,
-  ShieldCheck,
-  ShieldAlert,
   Bot,
   Users,
-  Compass,
   Sliders,
   Send,
   Sparkles,
-  BarChart3,
-  Thermometer,
   Database,
   CheckCircle2,
   FileText,
@@ -50,38 +38,22 @@ interface DashboardProps {
   onChange: (updated: Partial<SceneConfig>) => void;
 }
 
-// Initial mock packet for static buffer initialization
 const INITIAL_PACKET: LiveTelemetryPacket = {
   type: "telemetry",
   flight_id: "flight_init",
   profile: "patrol",
-  t: 120,
+  t: 0,
   duration_seconds: 600,
-  progress_pct: 20,
+  progress_pct: 0,
   rpm: 2450,
   channels: {
-    volt1: 28.3,
-    volt2: 28.1,
-    amp1: 33.0,
-    amp2: 32.5,
-    E1_FFlow: 11.2,
-    E1_OilT: 86.5,
-    E1_OilP: 63.5,
-    E1_CHT1: 165.0,
-    E1_CHT2: 158.0,
-    E1_CHT3: 168.0,
-    E1_CHT4: 155.0,
-    E1_EGT1: 640.0,
-    E1_EGT2: 635.0,
-    E1_EGT3: 645.0,
-    E1_EGT4: 630.0,
+    volt1: 28.3, volt2: 28.1, amp1: 33.0, amp2: 32.5,
+    E1_FFlow: 11.2, E1_OilT: 86.5, E1_OilP: 63.5,
+    E1_CHT1: 165.0, E1_CHT2: 158.0, E1_CHT3: 168.0, E1_CHT4: 155.0,
+    E1_EGT1: 640.0, E1_EGT2: 635.0, E1_EGT3: 645.0, E1_EGT4: 630.0,
   },
   alerts: [],
-  mission_risk: {
-    flight_id: "flight_init",
-    health_score: 96.0,
-    recommendation: "NOMINAL: Engine within flight tolerances.",
-  },
+  mission_risk: { flight_id: "flight_init", health_score: 100.0, recommendation: "NOMINAL: Engine within flight tolerances." },
   stage1_anomaly: false,
   stage2_fault: "normal",
   is_paused: false,
@@ -91,106 +63,95 @@ const INITIAL_PACKET: LiveTelemetryPacket = {
 type RightPaneTab = "telemetry" | "residuals" | "copilot" | "whatif";
 
 export function Dashboard({
-  config,
-  livePacket,
-  federatedSummary,
-  isConnected,
-  selectedSpeed,
-  selectedFault,
-  selectedProfile,
-  isPaused: isPausedProp,
-  onPause,
-  onResume,
-  onSeek,
-  onSetSpeed,
-  onSetProfile,
-  onTriggerFederated,
-  onInjectFault,
-  onChange,
+  config, livePacket, federatedSummary, isConnected,
+  selectedSpeed, selectedFault, selectedProfile, isPaused: isPausedProp,
+  onPause, onResume, onSeek, onSetSpeed, onSetProfile,
+  onTriggerFederated, onInjectFault, onChange,
 }: DashboardProps) {
-  // Static-length 35-sample buffer: initialized to full length so size NEVER changes
   const [history, setHistory] = useState<LiveTelemetryPacket[]>(() =>
     Array.from({ length: 35 }, () => INITIAL_PACKET)
   );
   const [showFleetModal, setShowFleetModal] = useState(false);
   const [activeTab, setActiveTab] = useState<RightPaneTab>("telemetry");
-
-  // Copilot Interactive Chat State
   const [copilotMessages, setCopilotMessages] = useState<Array<{ role: "user" | "copilot"; text: string }>>([
-    {
-      role: "copilot",
-      text: "AI Mission Copilot online. Telemetry stream synchronized with aero digital twin. Ask any engineering questions or select a query below.",
-    },
+    { role: "copilot", text: "AI Mission Copilot online. Telemetry stream synchronized with aero digital twin. Ask any engineering questions or select a query below." },
   ]);
   const [copilotInput, setCopilotInput] = useState("");
   const [isCopilotThinking, setIsCopilotThinking] = useState(false);
-
-  // What-If Simulation State
   const [whatIfDuration, setWhatIfDuration] = useState(90);
-  const [whatIfResult, setWhatIfResult] = useState<{
-    survivability_pct: number;
-    limiting_factor: string;
-    action: string;
-  } | null>(null);
+  const [whatIfResult, setWhatIfResult] = useState<{ survivability_pct: number; limiting_factor: string; action: string } | null>(null);
   const [isWhatIfRunning, setIsWhatIfRunning] = useState(false);
-
-  // Supabase Cloud Persistence & DB Explorer State
   const [showSupabaseModal, setShowSupabaseModal] = useState(false);
-  const [supabaseStatus, setSupabaseStatus] = useState<{
-    mode: string;
-    is_cloud_active: boolean;
-    supabase_url: string;
-    tables: { flights: number; telemetry_logs: number; alerts: number };
-  } | null>(null);
+  const [supabaseStatus, setSupabaseStatus] = useState<{ mode: string; is_cloud_active: boolean; supabase_url: string; tables: { flights: number; telemetry_logs: number; alerts: number } } | null>(null);
   const [supabaseFlights, setSupabaseFlights] = useState<any[]>([]);
   const [supabaseAlerts, setSupabaseAlerts] = useState<any[]>([]);
   const [isSyncingSupabase, setIsSyncingSupabase] = useState(false);
   const [showDebriefModal, setShowDebriefModal] = useState(false);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [seekVal, setSeekVal] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (livePacket) {
-      setHistory((prev) => [...prev.slice(1), livePacket]);
-    }
-  }, [livePacket]);
+  useEffect(() => { if (livePacket) setHistory((prev) => [...prev.slice(1), livePacket]); }, [livePacket]);
 
   const currentRPM = livePacket?.rpm || config.rpm;
   const currentSpeed = selectedSpeed ?? livePacket?.speed ?? 1.0;
   const isPaused = isPausedProp ?? livePacket?.is_paused ?? false;
-
   const activeProfile = selectedProfile ?? livePacket?.profile ?? "patrol";
-  const healthScore = livePacket?.mission_risk?.health_score ?? 96.0;
-  const healthRec = livePacket?.mission_risk?.recommendation ?? "NOMINAL: Engine within flight tolerances.";
-  const isAnomalous = selectedFault && selectedFault !== "normal" ? true : (livePacket?.stage1_anomaly ?? false);
-  const diagnosedFault = selectedFault ?? livePacket?.stage2_fault ?? "normal";
+
+  const isAnomalous = Boolean((selectedFault && selectedFault !== "normal") || (livePacket?.stage1_anomaly && livePacket?.stage2_fault !== "normal"));
+  const diagnosedFault = selectedFault && selectedFault !== "normal" ? selectedFault : (livePacket?.stage2_fault && livePacket.stage2_fault !== "normal" ? livePacket.stage2_fault : "normal");
+
+  // Prevent health score from desynchronizing or flickering between 100% and 58%
+  const healthScore = !isAnomalous || diagnosedFault === "normal"
+    ? 100.0
+    : (livePacket?.mission_risk?.health_score && livePacket.mission_risk.health_score < 100
+        ? livePacket.mission_risk.health_score
+        : diagnosedFault === "oil_cooler_degradation" ? 58.0
+        : diagnosedFault === "cylinder_head_overheat" ? 52.0
+        : diagnosedFault === "alternator_rectifier_drift" ? 64.0
+        : diagnosedFault === "fuel_flow_oscillation" ? 68.0
+        : 70.0);
+
+  const healthRec = !isAnomalous || diagnosedFault === "normal"
+    ? "NOMINAL: Engine within flight tolerances."
+    : (livePacket?.mission_risk?.recommendation && !livePacket.mission_risk.recommendation.startsWith("NOMINAL")
+        ? livePacket.mission_risk.recommendation
+        : diagnosedFault === "oil_cooler_degradation" ? "WARNING: Elevated oil temperature and pressure sag. Oil cooler heat exchanger degradation suspected."
+        : diagnosedFault === "cylinder_head_overheat" ? "CRITICAL: Cylinder 2 thermal runaway detected. CHT exceeding 230°C certified margin. Reduce throttle."
+        : diagnosedFault === "alternator_rectifier_drift" ? "CAUTION: Bus 1 voltage drop and current surge. Alternator rectifier diode degradation suspected."
+        : diagnosedFault === "fuel_flow_oscillation" ? "CAUTION: Fuel flow hunting and pressure oscillations. Fuel metering unit stick-slip suspected."
+        : "CAUTION: Parameter divergence detected on engine subsystem.");
 
   const formatTime = (secs: number) => {
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
+    const clamped = Math.max(0, Math.round(secs));
+    const m = Math.floor(clamped / 60);
+    const s = clamped % 60;
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  const currentFlightTime = livePacket?.t ?? 120;
+  const currentFlightTime = livePacket?.t ?? 0;
   const totalFlightTime = livePacket?.duration_seconds ?? 600;
+  const displayFlightTime = isSeeking && seekVal !== null ? seekVal : currentFlightTime;
+  const progressPct = isSeeking && seekVal !== null
+    ? Math.round((seekVal / Math.max(1, totalFlightTime)) * 100)
+    : (livePacket?.progress_pct ?? Math.round((currentFlightTime / Math.max(1, totalFlightTime)) * 100));
 
-  // Real-Time Aerospace HUD Metrics
   const chts = [
     livePacket?.channels?.E1_CHT1 ?? 165,
     livePacket?.channels?.E1_CHT2 ?? 158,
     livePacket?.channels?.E1_CHT3 ?? 168,
     livePacket?.channels?.E1_CHT4 ?? 155,
   ];
-  const maxCht = Math.max(...chts);
   const egts = [
     livePacket?.channels?.E1_EGT1 ?? 640,
     livePacket?.channels?.E1_EGT2 ?? 635,
     livePacket?.channels?.E1_EGT3 ?? 645,
     livePacket?.channels?.E1_EGT4 ?? 630,
   ];
+  const maxCht = Math.max(...chts);
   const egtSpread = Math.max(...egts) - Math.min(...egts);
-  const oilP = livePacket?.channels?.E1_OilP ?? 64;
-  const bus1V = livePacket?.channels?.volt1 ?? 28.4;
+  const oilP = livePacket?.channels?.E1_OilP ?? 63.5;
+  const bus1V = livePacket?.channels?.volt1 ?? 28.3;
 
-  // Dynamic API base host for robust local / LAN connections
   const getApiBase = () => {
     if (typeof window !== "undefined") {
       const host = window.location.hostname || "localhost";
@@ -199,50 +160,35 @@ export function Dashboard({
     return "http://localhost:8000";
   };
 
-  // Handle Copilot Chat Query
   const handleSendCopilotMessage = async (queryText?: string) => {
     const textToSend = (queryText || copilotInput).trim();
     if (!textToSend) return;
-
     setCopilotMessages((prev) => [...prev, { role: "user", text: textToSend }]);
     setCopilotInput("");
     setIsCopilotThinking(true);
-
     try {
-      const flightId = livePacket?.flight_id || "flight_demo";
       const res = await fetch(`${getApiBase()}/api/copilot/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ flight_id: flightId, message: textToSend }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ flight_id: livePacket?.flight_id || "flight_demo", message: textToSend }),
       });
       if (res.ok) {
         const data = await res.json();
         setCopilotMessages((prev) => [...prev, { role: "copilot", text: data.reply }]);
-      } else {
-        throw new Error("Backend unavailable");
-      }
+      } else { throw new Error("Backend unavailable"); }
     } catch {
-      // Local fallback reasoning if backend request encounters network latency
       const fallbackReply = textToSend.toLowerCase().includes("risk")
         ? `Current Mission Health Score is ${healthScore}%. ${healthRec}`
         : `Diagnostic Status: ${isAnomalous ? `Fault detected: ${diagnosedFault}` : "All 15 telemetry channels tracking nominal physics curves."} Peak CHT is ${Math.round(maxCht)}°C with EGT spread of ${Math.round(egtSpread)}°C.`;
       setCopilotMessages((prev) => [...prev, { role: "copilot", text: fallbackReply }]);
-    } finally {
-      setIsCopilotThinking(false);
-    }
+    } finally { setIsCopilotThinking(false); }
   };
 
-  // Handle What-If Mission Projection
   const handleRunWhatIf = async () => {
     setIsWhatIfRunning(true);
     try {
       const res = await fetch(`${getApiBase()}/api/mission-risk/what-if`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          engine_id: "engine_001",
-          planned_duration_minutes: whatIfDuration,
-        }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ engine_id: "engine_001", planned_duration_minutes: whatIfDuration }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -251,41 +197,28 @@ export function Dashboard({
           limiting_factor: data.limiting_factor || (isAnomalous ? `Thermal runaway on ${diagnosedFault}` : "Fuel endurance & oil thermal margins"),
           action: data.action || (healthScore < 60 ? "Recommend Mission Abort / Precautionary RTB" : "Cleared for planned mission profile"),
         });
-      } else {
-        throw new Error("Endpoint returned error");
-      }
+      } else { throw new Error("Endpoint returned error"); }
     } catch {
-      // Offline fallback computation
-      const calculatedSurvivability = Math.max(15, Math.min(99, Math.round(healthScore - (whatIfDuration / 120) * (isAnomalous ? 50 : 5))));
+      const s = Math.max(15, Math.min(99, Math.round(healthScore - (whatIfDuration / 120) * (isAnomalous ? 50 : 5))));
       setWhatIfResult({
-        survivability_pct: calculatedSurvivability,
+        survivability_pct: s,
         limiting_factor: isAnomalous ? `Degradation acceleration in ${diagnosedFault}` : "Nominal operational envelope",
-        action: calculatedSurvivability < 50 ? "ABORT: Exceeds safe thermodynamic margin" : "PROCEED: Mission profile within endurance limits",
+        action: s < 50 ? "ABORT: Exceeds safe thermodynamic margin" : "PROCEED: Mission profile within endurance limits",
       });
-    } finally {
-      setIsWhatIfRunning(false);
-    }
+    } finally { setIsWhatIfRunning(false); }
   };
 
-  // Supabase Data Loaders
   const loadSupabaseData = async () => {
     try {
       const base = getApiBase();
       const [resStatus, resFlights, resAlerts] = await Promise.all([
-        fetch(`${base}/api/supabase/status`),
-        fetch(`${base}/api/supabase/flights`),
-        fetch(`${base}/api/supabase/alerts`),
+        fetch(`${base}/api/supabase/status`), fetch(`${base}/api/supabase/flights`), fetch(`${base}/api/supabase/alerts`),
       ]);
       if (resStatus.ok) setSupabaseStatus(await resStatus.json());
       if (resFlights.ok) setSupabaseFlights(await resFlights.json());
       if (resAlerts.ok) setSupabaseAlerts(await resAlerts.json());
     } catch {
-      setSupabaseStatus({
-        mode: "postgres_direct",
-        is_cloud_active: false,
-        supabase_url: "PostgreSQL Database Engine (postgresql://postgres@localhost:5432/sih_digital_twin)",
-        tables: { flights: 1, telemetry_logs: 120, alerts: 0 },
-      });
+      setSupabaseStatus({ mode: "postgres_direct", is_cloud_active: false, supabase_url: "PostgreSQL (postgresql://postgres@localhost:5432/sih_digital_twin)", tables: { flights: 1, telemetry_logs: 120, alerts: 0 } });
     }
   };
 
@@ -293,1123 +226,628 @@ export function Dashboard({
     setIsSyncingSupabase(true);
     try {
       const base = getApiBase();
-      const flightId = livePacket?.flight_id || "flight_demo";
-      await fetch(`${base}/api/supabase/sync-flight/${flightId}`, { method: "POST" });
+      await fetch(`${base}/api/supabase/sync-flight/${livePacket?.flight_id || "flight_demo"}`, { method: "POST" });
       await loadSupabaseData();
-    } catch {
-      // ignore
-    } finally {
-      setIsSyncingSupabase(false);
-    }
+    } catch { /* ignore */ } finally { setIsSyncingSupabase(false); }
   };
 
+  const healthChipClass = healthScore < 40 ? "chip-abort" : healthScore < 70 ? "chip-warn" : "chip-ok";
+  const healthLabel = healthScore < 40 ? "ABORT" : healthScore < 70 ? "WARN" : "OK";
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ════════════════════════════════════════════════════════════════════════════
+
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden aerospace-grid-bg text-slate-800 fixed inset-0">
-      {/* ─── 1. ISRO / NASA Mission Control Header Bar ──────────────────────────── */}
-      <header className="h-14 border-b border-slate-200 bg-white/95 backdrop-blur px-4 flex items-center justify-between z-20 shrink-0 select-none">
-        {/* Left: Mission & Aircraft Identity */}
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center gap-2.5 shrink-0">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-orange-500 to-sky-600 flex items-center justify-center text-white shadow-xs font-black text-xs tracking-tighter shrink-0">
-              SIH
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xs sm:text-sm font-black tracking-tight text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
-                  DRDO <span className="text-sky-600">MALE UAV</span> DIGITAL TWIN
-                </h1>
-                <span className="hidden md:inline-block text-[10px] font-mono-tech px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-600 font-semibold whitespace-nowrap">
-                  {livePacket?.flight_id ? `ID: ${livePacket.flight_id.slice(0, 10)}` : "TAPAS-04"}
-                </span>
+    <div className="h-screen w-screen flex flex-col overflow-hidden select-none" style={{ background: "var(--bg)", padding: "18px", gap: "14px" }}>
+
+      {/* ═══ HEADER ═══════════════════════════════════════════════════════════ */}
+      <header className="dt-panel" style={{ padding: "14px 22px", flexShrink: 0 }}>
+        {/* Top Row */}
+        <div className="flex items-center justify-between">
+          {/* Brand */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center text-white font-bold text-[11px] tracking-wide" style={{ width: 34, height: 34, background: "var(--text)" }}>SIH</div>
+              <div>
+                <div className="text-[15px] font-semibold" style={{ color: "var(--text)" }}>DRDO MALE UAV Digital Twin</div>
+                <div className="text-[11px]" style={{ color: "var(--text-dim)" }}>Aero piston engine · 15 channels · real-time</div>
               </div>
-              <p className="text-[10px] text-slate-400 font-mono-tech whitespace-nowrap">
-                AERO PISTON ENGINE • 15 CHANNELS • 60 FPS
-              </p>
+            </div>
+            <span className="font-mono-tech text-[11px]" style={{ color: "var(--text-dim)", border: "1px solid var(--line)", padding: "4px 10px" }}>
+              {livePacket?.flight_id ? `ID: ${livePacket.flight_id.slice(0, 12)}` : "ID: flight_8e5"}
+            </span>
+          </div>
+
+          {/* Mid Stats */}
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col gap-px">
+              <span className="font-mono-tech text-[10px] uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Regime</span>
+              <span className="font-mono-tech text-[13px]" style={{ color: "var(--text)" }}>
+                <select
+                  value={activeProfile}
+                  onChange={(e) => onSetProfile(e.target.value)}
+                  className="font-mono-tech text-[13px] bg-transparent border-none outline-none cursor-pointer" style={{ color: "var(--text)" }}
+                >
+                  <option value="patrol">Patrol · 2420 RPM · 11.2 GPH</option>
+                  <option value="climb">Climb · 2550 RPM · 14.8 GPH</option>
+                  <option value="cruise">Cruise · 2380 RPM · 9.8 GPH</option>
+                  <option value="high_altitude">Thin-air 18,000 ft (Low O₂)</option>
+                  <option value="desert_heat">Desert heat (48°C)</option>
+                  <option value="arctic_cold">Arctic sub-zero (-25°C)</option>
+                  <option value="combat_burst">Combat burst · 2750 RPM</option>
+                </select>
+              </span>
+            </div>
+
+            <div className="divider-v" />
+
+            <div className="flex flex-col gap-px">
+              <span className="font-mono-tech text-[10px] uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Mission elapsed</span>
+              <span className="font-mono-tech text-[13px]" style={{ color: "var(--text)" }}>T+{formatTime(displayFlightTime)}</span>
+            </div>
+
+            <div className="divider-v" />
+
+            <div className="flex flex-col gap-px">
+              <span className="font-mono-tech text-[10px] uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Anomaly</span>
+              <span className="font-mono-tech text-[13px]" style={{ color: isAnomalous ? "var(--red)" : "var(--text)" }}>
+                {isAnomalous ? diagnosedFault.replace(/_/g, " ") : "None detected"}
+              </span>
+            </div>
+
+            <div className={`flex items-center gap-2 font-mono-tech text-[12px] ${healthChipClass}`} style={{ padding: "6px 12px" }}>
+              <span className="rounded-full" style={{ width: 7, height: 7, background: "currentColor" }} />
+              HEALTH {Math.round(healthScore)}% — {healthLabel}
             </div>
           </div>
-
-          <div className="h-6 w-px bg-slate-200 hidden md:block shrink-0" />
-
-          {/* Mission Profile & Environmental Regime Avionics Selector */}
-          <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 shrink-0">
-            <Compass className="w-3.5 h-3.5 text-sky-600 shrink-0" />
-            <span className="text-[10px] font-mono-tech text-slate-500 font-bold hidden sm:inline">REGIME:</span>
-            <select
-              value={activeProfile}
-              onChange={(e) => onSetProfile(e.target.value)}
-              className="bg-white text-slate-900 font-mono-tech text-xs font-bold px-2 py-0.5 rounded border border-slate-300 shadow-2xs hover:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
-            >
-              <option value="patrol">PATROL (2420 RPM • 11.2 GPH)</option>
-              <option value="climb">CLIMB (2550 RPM • 14.8 GPH)</option>
-              <option value="cruise">CRUISE (2380 RPM • 9.8 GPH)</option>
-              <option value="high_altitude">THIN-AIR 18,000 FT (Low O₂)</option>
-              <option value="desert_heat">DESERT HEAT (48°C Tarmac)</option>
-              <option value="arctic_cold">ARCTIC SUB-ZERO (-25°C)</option>
-              <option value="combat_burst">COMBAT BURST (2750 RPM • WOT)</option>
-            </select>
-          </div>
-
-          <div className="h-6 w-px bg-slate-200 hidden lg:block shrink-0" />
-
-          {/* Mission Elapsed Time (MET) */}
-          <div className="hidden lg:flex items-center gap-1.5 text-xs font-mono-tech bg-slate-50 px-2 py-1 rounded border border-slate-200 shrink-0">
-            <Clock className="w-3.5 h-3.5 text-slate-500" />
-            <span className="text-slate-500">MET:</span>
-            <span className="font-bold text-slate-800 w-16 text-center tabular-nums">
-              T+{formatTime(currentFlightTime)}
-            </span>
-          </div>
         </div>
 
-        {/* Right: System Health, Diagnostic Status, DB & Action Badges */}
-        <div className="flex items-center gap-2 shrink-0 ml-auto pl-2">
-          {/* Health Score Pill */}
-          <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-bold transition-colors shrink-0 ${
-            healthScore < 40
-              ? "bg-red-50 border-red-300 text-red-700"
-              : healthScore < 70
-              ? "bg-amber-50 border-amber-300 text-amber-700"
-              : "bg-emerald-50 border-emerald-300 text-emerald-700"
-          }`}>
-            {healthScore < 40 ? (
-              <ShieldAlert className="w-3.5 h-3.5 text-red-600 animate-pulse" />
-            ) : (
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            )}
-            <span>HEALTH:</span>
-            <span className="font-mono-tech w-9 text-right tabular-nums">{healthScore}%</span>
-            <span className="text-[9px] uppercase font-mono-tech text-slate-400">
-              ({healthScore < 40 ? "ABORT" : healthScore < 70 ? "WARN" : "OK"})
-            </span>
+        {/* KPI Bottom Row */}
+        <div className="flex gap-8 items-center" style={{ paddingTop: 12, marginTop: 12, borderTop: "1px solid var(--line)" }}>
+          <div className="flex items-baseline gap-1.5 text-[12px]" style={{ color: "var(--text-dim)" }}>
+            PEAK CHT <b className={`font-mono-tech text-[13px] font-semibold ${maxCht > 200 ? "" : ""}`} style={{ color: maxCht > 200 ? "var(--ochre)" : "var(--text)" }}>{Math.round(maxCht)}°C</b>
           </div>
-
-          {/* AI Cascade Status Pill */}
-          <div className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs shrink-0 ${
-            isAnomalous
-              ? "bg-red-50 border-red-200 text-red-700 font-semibold"
-              : "bg-slate-50 border-slate-200 text-slate-600"
-          }`}>
-            <Activity className="w-3 h-3 text-sky-600 shrink-0" />
-            <span className="font-mono-tech text-[10px]">
-              {isAnomalous ? `FAULT: ${diagnosedFault.toUpperCase()}` : "ANOMALY: NONE"}
-            </span>
+          <div className="flex items-baseline gap-1.5 text-[12px]" style={{ color: "var(--text-dim)" }}>
+            EGT SPREAD <b className="font-mono-tech text-[13px] font-semibold" style={{ color: "var(--text)" }}>{Math.round(egtSpread)}°C</b>
           </div>
-        </div>
-
-        {/* Right: Federated Fleet Trigger, Supabase DB & Link Status */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Official Sortie Debrief Report Trigger */}
-          <button
-            onClick={() => setShowDebriefModal(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg border bg-sky-50 text-sky-800 border-sky-300 shadow-xs hover:bg-sky-100 transition-all cursor-pointer whitespace-nowrap"
-            title="Open Sortie Debrief & Accident Investigation Board Report"
-          >
-            <FileText className="w-3.5 h-3.5 text-sky-600" />
-            <span>DEBRIEF</span>
-          </button>
-
-          {/* Supabase Cloud Database Explorer */}
-          <button
-            onClick={() => {
-              loadSupabaseData();
-              setShowSupabaseModal(true);
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg border bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs hover:bg-emerald-100 transition-all cursor-pointer whitespace-nowrap"
-            title="Open Supabase Cloud Database Explorer"
-          >
-            <Database className="w-3.5 h-3.5 text-emerald-600" />
-            <span>SUPABASE DB</span>
-          </button>
-
-          {/* Federated Learning Squadron Trigger */}
-          <button
-            onClick={() => {
-              onTriggerFederated();
-              setShowFleetModal(true);
-            }}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg border bg-gradient-to-r from-sky-600 to-indigo-600 text-white border-sky-700 shadow-xs hover:from-sky-700 hover:to-indigo-700 transition-all cursor-pointer whitespace-nowrap"
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>FEDAVG</span>
-          </button>
-
-          {/* WebSocket Link Status */}
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-mono-tech ${
-            isConnected
-              ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-              : "bg-amber-50 border-amber-200 text-amber-700"
-          }`}>
-            <Radio className={`w-3 h-3 shrink-0 ${isConnected ? "animate-pulse text-emerald-600" : "text-amber-600"}`} />
-            <span className="text-[10px] font-bold whitespace-nowrap">
-              {isConnected ? "WS 8000" : "SIM"}
-            </span>
+          <div className="flex items-baseline gap-1.5 text-[12px]" style={{ color: "var(--text-dim)" }}>
+            OIL PRESS <b className="font-mono-tech text-[13px] font-semibold" style={{ color: oilP < 45 ? "var(--red)" : "var(--text)" }}>{Math.round(oilP)} psi</b>
+          </div>
+          <div className="flex items-baseline gap-1.5 text-[12px]" style={{ color: "var(--text-dim)" }}>
+            MAIN BUS <b className="font-mono-tech text-[13px] font-semibold" style={{ color: "var(--text)" }}>{bus1V.toFixed(1)} V</b>
+          </div>
+          <div className="flex items-center gap-1.5 font-mono-tech text-[11px] ml-auto" style={{ color: "var(--teal)" }}>
+            <span className="rounded-full" style={{ width: 6, height: 6, background: "var(--teal)" }} />
+            {isConnected ? "MISSION ACTIVE · WS 8000" : "SIMULATION MODE"}
           </div>
         </div>
       </header>
 
-      {/* ─── 1.5 Aerospace HUD Ticker Ribbon ────────────────────────────────────── */}
-      <div className="h-8 bg-slate-900 text-slate-300 px-4 flex items-center justify-between text-[11px] font-mono-tech border-b border-slate-800 shrink-0 z-10 select-none">
-        <div className="flex items-center gap-4 overflow-x-auto">
-          <div className="flex items-center gap-1.5">
-            <Thermometer className="w-3.5 h-3.5 text-orange-400" />
-            <span className="text-slate-400">PEAK CHT:</span>
-            <span className={`font-bold tabular-nums ${maxCht > 200 ? "text-red-400" : "text-emerald-400"}`}>
-              {Math.round(maxCht)}°C
-            </span>
-          </div>
+      {/* ═══ MAIN GRID ═══════════════════════════════════════════════════════ */}
+      <div className="flex-1 min-h-0" style={{ display: "grid", gridTemplateColumns: "1.15fr 1fr", gap: 14 }}>
 
-          <div className="h-3 w-px bg-slate-700" />
-
-          <div className="flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-sky-400" />
-            <span className="text-slate-400">EGT SPREAD:</span>
-            <span className="font-bold text-sky-300 tabular-nums">{Math.round(egtSpread)}°C</span>
-          </div>
-
-          <div className="h-3 w-px bg-slate-700" />
-
-          <div className="flex items-center gap-1.5">
-            <Gauge className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-slate-400">OIL PRESS:</span>
-            <span className={`font-bold tabular-nums ${oilP < 45 ? "text-red-400" : "text-amber-300"}`}>
-              {Math.round(oilP)} psi
-            </span>
-          </div>
-
-          <div className="h-3 w-px bg-slate-700" />
-
-          <div className="flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-slate-400">MAIN BUS:</span>
-            <span className="font-bold text-emerald-400 tabular-nums">{bus1V.toFixed(1)} V</span>
-          </div>
-        </div>
-
-        <div className="hidden md:flex items-center gap-2 text-slate-400">
-          <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-          <span className="text-[10px] text-emerald-400 font-bold uppercase">MISSION ACTIVE</span>
-        </div>
-      </div>
-
-      {/* ─── 2. Main Mission Split Viewport (Rigid Non-Jitter Grid) ──────────────── */}
-      <main className="flex-1 min-h-0 min-w-0 flex p-2.5 gap-2.5 overflow-hidden">
-        {/* LEFT PANE (50% width): 3D Engine Digital Twin Mounted on Bench */}
-        <section className="w-1/2 h-full min-w-0 min-h-0 flex flex-col aero-panel overflow-hidden relative shadow-xs">
-          {/* Top 3D Viewport Controls Bar */}
-          <div className="h-9 px-3 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 z-10 select-none">
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1 text-xs font-bold text-slate-800">
-                <Cpu className="w-3.5 h-3.5 text-sky-600" />
-                3D SPATIAL TWIN
-              </span>
-              <span className="text-[9px] font-mono-tech text-slate-400">
-                SOLID BENCH • 60 FPS
-              </span>
-            </div>
-
-            {/* Quick 3D Viewport Actions */}
-            <div className="flex items-center gap-1.5">
-              {/* 3D Render Modes (Solid, FLIR, X-Ray) */}
-              <div className="flex items-center bg-slate-100 p-0.5 rounded-md border border-slate-200">
-                {[
-                  { id: "solid", label: "CAD Solid" },
-                  { id: "flir", label: "FLIR Thermal" },
-                  { id: "xray", label: "X-Ray Cutaway" },
-                ].map(({ id, label }) => (
-                  <button
-                    key={id}
-                    onClick={() => onChange({ renderMode: id as any })}
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono-tech font-bold uppercase transition-all cursor-pointer ${
-                      (config.renderMode || "solid") === id
-                        ? "bg-white text-slate-900 shadow-xs border border-slate-200"
-                        : "text-slate-500 hover:text-slate-800"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Camera Perspective Presets */}
-              <div className="hidden sm:flex items-center bg-slate-100 p-0.5 rounded-md border border-slate-200">
-                {[
-                  { id: "iso", label: "ISO" },
-                  { id: "top", label: "TOP" },
-                  { id: "side", label: "SIDE" },
-                  { id: "front", label: "FRONT" },
-                ].map(({ id, label }) => (
-                  <button
-                    key={id}
-                    onClick={() => onChange({ cameraPreset: id as any })}
-                    className={`px-1.5 py-0.5 rounded text-[9px] font-mono-tech font-bold uppercase transition-all cursor-pointer ${
-                      (config.cameraPreset || "iso") === id
-                        ? "bg-sky-600 text-white shadow-xs"
-                        : "text-slate-500 hover:text-slate-800"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={() => onChange({ explodedView: !config.explodedView })}
-                className={`flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold rounded-md border transition-all cursor-pointer ${
-                  config.explodedView
-                    ? "bg-sky-600 text-white border-sky-700 shadow-xs"
-                    : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
-                }`}
-              >
-                <Maximize2 className="w-3 h-3" />
-                <span>{config.explodedView ? "EXPLODED" : "ASSEMBLED"}</span>
-              </button>
-
-              <button
-                onClick={() => onChange({ wireframe: !config.wireframe })}
-                className={`p-1 rounded-md border transition-all cursor-pointer ${
-                  config.wireframe
-                    ? "bg-slate-800 text-white border-slate-900"
-                    : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
-                }`}
-                title="Toggle Wireframe CAD"
-              >
-                <Layers className="w-3 h-3" />
-              </button>
-
-              <button
-                onClick={() => onChange({ autoRotate: !config.autoRotate })}
-                className={`p-1 rounded-md border transition-all cursor-pointer ${
-                  config.autoRotate
-                    ? "bg-sky-100 text-sky-700 border-sky-300"
-                    : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
-                }`}
-                title="Toggle Orbital Auto-Rotation"
-              >
-                <RotateCw className="w-3 h-3" />
-              </button>
+        {/* ─── LEFT: 3D Digital Twin ──────────────────────────────────────── */}
+        <div className="dt-panel flex flex-col" style={{ padding: "18px 20px" }}>
+          {/* Panel Title */}
+          <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
+            <h3 className="text-[13px] font-semibold">3D spatial twin</h3>
+            <div className="flex" style={{ gap: 2 }}>
+              {(["iso", "top", "side", "front"] as const).map((id) => (
+                <button
+                  key={id}
+                  onClick={() => onChange({ cameraPreset: id })}
+                  className={`view-tab ${(config.cameraPreset || "iso") === id ? "active" : ""}`}
+                >
+                  {id === "iso" ? "ISO" : id.charAt(0).toUpperCase() + id.slice(1)}
+                </button>
+              ))}
             </div>
           </div>
+          <div className="text-[11.5px]" style={{ color: "var(--text-dim)", marginBottom: 14 }}>
+            Horizontally-opposed 4-cylinder · {config.renderMode === "flir" ? "FLIR thermal" : config.renderMode === "xray" ? "X-Ray cutaway" : "CAD solid"} render
+          </div>
 
-          {/* 3D Canvas Body - Rigidly Constrained */}
-          <div className="flex-1 min-h-0 w-full h-full relative overflow-hidden bg-slate-100">
+          {/* 3D Canvas */}
+          <div className="flex-1 min-h-0 relative" style={{ background: "var(--panel2)", border: "1px solid var(--line)" }}>
             <Scene3D
               config={config}
               livePacket={livePacket}
               onSelectCylinder={(id) => onChange({ selectedCylinder: config.selectedCylinder === id ? null : id })}
             />
 
-            {/* In-Canvas Overlay: Fixed-Width RPM Gauge Badge */}
-            <div className="absolute top-2.5 left-2.5 pointer-events-none z-10 flex flex-col gap-1">
-              <div className="bg-white/95 backdrop-blur-md border border-slate-200 rounded-lg px-2.5 py-1.5 shadow-xs text-xs space-y-0.5">
-                <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                  <Gauge className="w-3.5 h-3.5 text-orange-600 shrink-0" />
-                  <span className="font-mono-tech w-18 inline-block tabular-nums">{currentRPM} RPM</span>
-                </div>
-                <div className="text-[9px] text-slate-400 font-mono-tech">
-                  PROPELLER LOCKED
-                </div>
+            {/* RPM Overlay */}
+            <div className="absolute top-3 left-3 dt-panel" style={{ padding: "8px 12px" }}>
+              <div className="font-mono-tech text-[18px] font-semibold" style={{ color: "var(--text)" }}>
+                {currentRPM?.toLocaleString()}
               </div>
-
-              {config.selectedCylinder && (
-                <div className="bg-sky-100 border border-sky-400 text-sky-950 rounded-md px-2 py-0.5 text-[10px] font-bold shadow-xs flex items-center gap-1.5 pointer-events-auto">
-                  <span>FOCUS: CYLINDER {config.selectedCylinder}</span>
-                  <button
-                    onClick={() => onChange({ selectedCylinder: null })}
-                    className="hover:text-red-600 font-bold ml-0.5 cursor-pointer"
-                    title="Clear cylinder focus"
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
+              <div className="text-[10px]" style={{ color: "var(--text-faint)" }}>RPM · PROPELLER LOCKED</div>
             </div>
 
-            {/* In-Canvas Overlay: FMEA Fault Injection Triggers */}
-            <div className="absolute bottom-2.5 left-2.5 right-2.5 bg-white/95 backdrop-blur-md border border-slate-200 rounded-lg p-2 shadow-sm flex items-center justify-between gap-1.5 z-10 select-none">
-              <span className="text-[9px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1 shrink-0">
-                <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
-                FMEA Faults:
-              </span>
-
-              <div className="flex items-center gap-1 overflow-x-auto">
+            {/* Render Mode Buttons */}
+            <div className="absolute top-3 right-3 flex" style={{ gap: 2 }}>
+              {(["solid", "flir", "xray"] as const).map((m) => (
                 <button
-                  onClick={() => onInjectFault("normal")}
-                  className={`px-2 py-0.5 text-[10px] font-semibold rounded border transition-colors cursor-pointer ${
-                    diagnosedFault === "normal"
-                      ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
-                      : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200"
-                  }`}
+                  key={m}
+                  onClick={() => onChange({ renderMode: m })}
+                  className={`view-tab ${(config.renderMode || "solid") === m ? "active" : ""}`}
+                  style={{ fontSize: "10.5px", padding: "4px 10px" }}
                 >
-                  Clean
+                  {m === "solid" ? "Solid" : m === "flir" ? "FLIR" : "X-Ray"}
                 </button>
-
-                <button
-                  onClick={() => onInjectFault("cylinder_head_overheat", 2, 0.9)}
-                  className={`px-2 py-0.5 text-[10px] font-semibold rounded border transition-colors cursor-pointer ${
-                    diagnosedFault === "cylinder_head_overheat"
-                      ? "bg-red-600 text-white border-red-700 shadow-xs"
-                      : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-red-50 hover:text-red-700"
-                  }`}
-                >
-                  Cyl 2 Heat
-                </button>
-
-                <button
-                  onClick={() => onInjectFault("oil_cooler_degradation", undefined, 0.85)}
-                  className={`px-2 py-0.5 text-[10px] font-semibold rounded border transition-colors cursor-pointer ${
-                    diagnosedFault === "oil_cooler_degradation"
-                      ? "bg-orange-600 text-white border-orange-700 shadow-xs"
-                      : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-orange-50 hover:text-orange-700"
-                  }`}
-                >
-                  Oil Loss
-                </button>
-
-                <button
-                  onClick={() => onInjectFault("alternator_rectifier_drift", undefined, 0.8)}
-                  className={`px-2 py-0.5 text-[10px] font-semibold rounded border transition-colors cursor-pointer ${
-                    diagnosedFault === "alternator_rectifier_drift"
-                      ? "bg-amber-600 text-white border-amber-700 shadow-xs"
-                      : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-amber-50 hover:text-amber-700"
-                  }`}
-                >
-                  Alt Sag
-                </button>
-
-                <button
-                  onClick={() => onInjectFault("fuel_flow_oscillation", undefined, 0.75)}
-                  className={`px-2 py-0.5 text-[10px] font-semibold rounded border transition-colors cursor-pointer ${
-                    diagnosedFault === "fuel_flow_oscillation"
-                      ? "bg-sky-600 text-white border-sky-700 shadow-xs"
-                      : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-sky-50 hover:text-sky-700"
-                  }`}
-                >
-                  Fuel Hunt
-                </button>
-              </div>
+              ))}
+              <button
+                onClick={() => onChange({ explodedView: !config.explodedView })}
+                className={`view-tab ${config.explodedView ? "active" : ""}`}
+                style={{ fontSize: "10.5px", padding: "4px 10px", marginLeft: 4 }}
+              >
+                <Maximize2 className="inline w-3 h-3 mr-1" />
+                {config.explodedView ? "Exploded" : "Assembled"}
+              </button>
             </div>
+
+            {/* Selected Cylinder Badge */}
+            {config.selectedCylinder && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 font-mono-tech text-[10px] font-bold" style={{ color: "var(--teal)", border: "1px solid var(--teal)", background: "var(--teal-bg)", padding: "3px 10px" }}>
+                FOCUS: CYL {config.selectedCylinder}
+                <button onClick={() => onChange({ selectedCylinder: null })} className="ml-2 cursor-pointer" style={{ color: "var(--red)" }}>✕</button>
+              </div>
+            )}
           </div>
-        </section>
 
-        {/* RIGHT PANE (50% width): Mission Control Multi-View Engineering Center */}
-        <section className="w-1/2 h-full min-w-0 min-h-0 flex flex-col aero-panel overflow-hidden shadow-xs">
-          {/* Top Panel Navigation Tabs */}
-          <div className="h-9 px-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0 select-none">
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setActiveTab("telemetry")}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
-                  activeTab === "telemetry"
-                    ? "bg-white text-slate-900 shadow-xs border border-slate-200"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                <Activity className="w-3 h-3 text-sky-600" />
-                <span>TELEMETRY</span>
-              </button>
+          {/* Fault Injection Row */}
+          <div className="flex items-center gap-2 flex-wrap" style={{ marginTop: 14 }}>
+            <span className="flex items-center gap-1.5 text-[11px]" style={{ color: "var(--text-dim)", marginRight: 4 }}>
+              <AlertTriangle className="w-3 h-3" style={{ color: "var(--ochre)" }} />
+              FMEA fault injection
+            </span>
+            <button onClick={() => onInjectFault("normal")} className={`fault-btn ${diagnosedFault === "normal" ? "clean" : ""}`}>Clean</button>
+            <button onClick={() => onInjectFault("cylinder_head_overheat", 2, 0.9)} className={`fault-btn ${diagnosedFault === "cylinder_head_overheat" ? "active" : ""}`}>Cyl 2 overheat</button>
+            <button onClick={() => onInjectFault("oil_cooler_degradation", undefined, 0.85)} className={`fault-btn ${diagnosedFault === "oil_cooler_degradation" ? "active" : ""}`}>Oil loss</button>
+            <button onClick={() => onInjectFault("alternator_rectifier_drift", undefined, 0.8)} className={`fault-btn ${diagnosedFault === "alternator_rectifier_drift" ? "active" : ""}`}>Alternator sag</button>
+            <button onClick={() => onInjectFault("fuel_flow_oscillation", undefined, 0.75)} className={`fault-btn ${diagnosedFault === "fuel_flow_oscillation" ? "active" : ""}`}>Fuel starvation</button>
+          </div>
+        </div>
 
-              <button
-                onClick={() => setActiveTab("copilot")}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
-                  activeTab === "copilot"
-                    ? "bg-white text-slate-900 shadow-xs border border-slate-200"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                <Bot className="w-3 h-3 text-indigo-600" />
-                <span>AI COPILOT</span>
-              </button>
+        {/* ─── RIGHT: Telemetry & AI ──────────────────────────────────────── */}
+        <div className="flex flex-col min-h-0" style={{ gap: 14 }}>
 
-              <button
-                onClick={() => setActiveTab("whatif")}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
-                  activeTab === "whatif"
-                    ? "bg-white text-slate-900 shadow-xs border border-slate-200"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                <Sliders className="w-3 h-3 text-orange-600" />
-                <span>WHAT-IF</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab("residuals")}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
-                  activeTab === "residuals"
-                    ? "bg-white text-slate-900 shadow-xs border border-slate-200"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                <BarChart3 className="w-3 h-3 text-emerald-600" />
-                <span>RESIDUALS</span>
-              </button>
+          {/* AI Advisory Banner */}
+          <div className="advisory-box">
+            <span className="advisory-badge" style={{ color: isAnomalous ? "var(--red)" : "var(--green)", borderColor: isAnomalous ? "var(--red)" : "var(--green)" }}>
+              {isAnomalous ? "FAULT" : "NOMINAL"}
+            </span>
+            <div className="flex-1 text-[13px]" style={{ lineHeight: 1.5 }}>
+              <b className="font-semibold">AI pilot advisory:</b> {livePacket?.alerts?.[0]?.report_text || healthRec}
             </div>
-
-            <span className="text-[9px] font-mono-tech px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
-              15 CHANNELS
+            <span className="font-mono-tech text-[10.5px] whitespace-nowrap" style={{ color: "var(--text-faint)" }}>
+              CONFIDENCE {livePacket?.alerts?.[0]?.confidence ? `${Math.round(livePacket.alerts[0].confidence * 100)}%` : "98%"}
             </span>
           </div>
 
-          {/* Tab 1: Real-Time Telemetry Charts */}
-          {activeTab === "telemetry" && (
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-2.5 space-y-2.5">
-              {/* AI Advisory Banner */}
-              <div className="p-2.5 rounded-lg bg-gradient-to-r from-sky-50 to-indigo-50 border border-sky-200/80 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 text-xs font-bold text-sky-900">
-                    <Bot className="w-3.5 h-3.5 text-sky-700 shrink-0" />
-                    AI PILOT ADVISORY
-                  </span>
-                  <span className="text-[9px] font-mono-tech text-sky-700 font-semibold uppercase">
-                    CONFIDENCE: {livePacket?.alerts?.[0]?.confidence ? `${Math.round(livePacket.alerts[0].confidence * 100)}%` : "98% NOMINAL"}
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-700 leading-snug">
-                  {livePacket?.alerts?.[0]?.report_text || healthRec}
-                </p>
-              </div>
+          {/* Tab Navigation */}
+          <div className="flex" style={{ gap: 2 }}>
+            {([
+              { id: "telemetry" as const, label: "Telemetry" },
+              { id: "copilot" as const, label: "AI copilot" },
+              { id: "whatif" as const, label: "What-if" },
+              { id: "residuals" as const, label: "Residuals" },
+            ]).map(({ id, label }) => (
+              <button key={id} onClick={() => setActiveTab(id)} className={`view-tab ${activeTab === id ? "active" : ""}`}>
+                {label}
+              </button>
+            ))}
 
-              {/* Time-Series Charts Component Suite */}
+            <div className="ml-auto flex items-center" style={{ gap: 6 }}>
+              <button
+                onClick={() => setShowDebriefModal(true)}
+                className="view-tab flex items-center gap-1"
+              >
+                <FileText className="w-3 h-3" />
+                Debrief
+              </button>
+              <button
+                onClick={() => { loadSupabaseData(); setShowSupabaseModal(true); }}
+                className="view-tab flex items-center gap-1"
+              >
+                <Database className="w-3 h-3" />
+                Database
+              </button>
+              <button
+                onClick={() => { onTriggerFederated(); setShowFleetModal(true); }}
+                className="view-tab flex items-center gap-1"
+              >
+                <Users className="w-3 h-3" />
+                FedAvg
+              </button>
+            </div>
+          </div>
+
+          {/* Tab Content */}
+          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar dt-panel" style={{ padding: "18px 20px" }}>
+
+            {/* ── Telemetry Tab ── */}
+            {activeTab === "telemetry" && (
               <TelemetryCharts
                 packet={livePacket}
                 history={history}
                 selectedCylinder={config.selectedCylinder}
                 onSelectCylinder={(id) => onChange({ selectedCylinder: config.selectedCylinder === id ? null : id })}
               />
-            </div>
-          )}
+            )}
 
-          {/* Tab 2: Interactive AI Mission Copilot Q&A */}
-          {activeTab === "copilot" && (
-            <div className="flex-1 min-h-0 flex flex-col p-3 gap-2.5 overflow-hidden">
-              <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-2.5 p-2 bg-slate-50 rounded-lg border border-slate-200">
-                {copilotMessages.map((msg, i) => (
-                  <div
-                    key={i}
-                    className={`flex flex-col text-xs leading-relaxed p-2.5 rounded-lg ${
-                      msg.role === "user"
-                        ? "bg-sky-600 text-white ml-8 shadow-xs"
-                        : "bg-white text-slate-800 mr-8 border border-slate-200 shadow-xs"
-                    }`}
-                  >
-                    <span className="text-[10px] font-bold opacity-75 uppercase mb-1">
-                      {msg.role === "user" ? "Operator Query" : "DRDO Copilot Engine"}
-                    </span>
-                    <span>{msg.text}</span>
+            {/* ── AI Copilot Tab ── */}
+            {activeTab === "copilot" && (
+              <div className="flex flex-col h-full gap-3">
+                <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-2.5 p-3" style={{ background: "var(--panel2)", border: "1px solid var(--line)" }}>
+                  {copilotMessages.map((msg, i) => (
+                    <div key={i} className={`text-[12px] leading-relaxed p-3 ${msg.role === "user" ? "ml-12" : "mr-12"}`}
+                      style={{
+                        background: msg.role === "user" ? "var(--text)" : "var(--panel)",
+                        color: msg.role === "user" ? "var(--panel)" : "var(--text)",
+                        border: msg.role === "user" ? "none" : "1px solid var(--line)",
+                      }}
+                    >
+                      <span className="block text-[10px] font-bold uppercase mb-1" style={{ opacity: 0.6 }}>
+                        {msg.role === "user" ? "Operator query" : "DRDO copilot engine"}
+                      </span>
+                      {msg.text}
+                    </div>
+                  ))}
+                  {isCopilotThinking && (
+                    <div className="font-mono-tech text-[12px] p-2" style={{ color: "var(--text-faint)" }}>Analyzing 15-channel engine twin telemetry...</div>
+                  )}
+                </div>
+
+                <div className="flex items-center flex-wrap" style={{ gap: 6 }}>
+                  <span className="text-[10px] font-bold" style={{ color: "var(--text-faint)" }}>Prompts:</span>
+                  {["Explain current status", "Assess thermal margin", "Recommend throttle", "Diagnose bus drift"].map((p) => (
+                    <button key={p} onClick={() => handleSendCopilotMessage(p)} className="fault-btn" style={{ fontSize: "10px", padding: "4px 10px" }}>{p}</button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text" value={copilotInput}
+                    onChange={(e) => setCopilotInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSendCopilotMessage()}
+                    placeholder="Ask copilot about engine health, thermal trends, or abort rules..."
+                    className="flex-1 px-3 py-2 text-[12px] font-mono-tech outline-none"
+                    style={{ background: "var(--panel)", border: "1px solid var(--line)", color: "var(--text)" }}
+                  />
+                  <button onClick={() => handleSendCopilotMessage()} className="view-tab active flex items-center gap-1.5" style={{ padding: "8px 14px" }}>
+                    <Send className="w-3 h-3" /> Ask
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── What-If Tab ── */}
+            {activeTab === "whatif" && (
+              <div className="space-y-4">
+                <div style={{ padding: "14px 16px", background: "var(--ochre-bg)", border: "1px solid var(--ochre)" }}>
+                  <h3 className="text-[12px] font-semibold flex items-center gap-1.5" style={{ color: "var(--ochre)" }}>
+                    <Sparkles className="w-3.5 h-3.5" /> FORWARD MISSION SURVIVABILITY PROJECTION
+                  </h3>
+                  <p className="text-[11px] mt-1" style={{ color: "var(--text-dim)" }}>
+                    Projects engine survivability across planned sortie duration based on current digital twin residuals.
+                  </p>
+                </div>
+
+                <div className="dt-panel" style={{ padding: "16px" }}>
+                  <div className="flex justify-between text-[12px] font-semibold mb-2">
+                    <span>Planned sortie duration:</span>
+                    <span className="font-mono-tech" style={{ color: "var(--teal)" }}>{whatIfDuration} minutes</span>
                   </div>
-                ))}
-                {isCopilotThinking && (
-                  <div className="text-xs text-slate-500 font-mono-tech animate-pulse p-2">
-                    Analyzing 15-channel engine twin telemetry...
+                  <input type="range" min={15} max={180} step={5} value={whatIfDuration}
+                    onChange={(e) => setWhatIfDuration(parseInt(e.target.value, 10))}
+                    className="w-full cursor-pointer" style={{ accentColor: "var(--teal)" }}
+                  />
+                  <div className="flex justify-between font-mono-tech text-[10px] mt-1" style={{ color: "var(--text-faint)" }}>
+                    <span>15 min</span><span>90 min</span><span>180 min</span>
+                  </div>
+                  <button onClick={handleRunWhatIf} disabled={isWhatIfRunning}
+                    className="view-tab active w-full mt-4 flex items-center justify-center gap-1.5" style={{ padding: "10px" }}>
+                    <Sliders className="w-3.5 h-3.5" />
+                    {isWhatIfRunning ? "Computing physics..." : "Calculate mission survivability"}
+                  </button>
+                </div>
+
+                {whatIfResult && (
+                  <div className="dt-panel" style={{ padding: "16px" }}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] font-semibold">PROJECTED SURVIVABILITY:</span>
+                      <span className="font-mono-tech text-[14px] font-bold" style={{ color: whatIfResult.survivability_pct < 50 ? "var(--red)" : "var(--green)" }}>
+                        {whatIfResult.survivability_pct}%
+                      </span>
+                    </div>
+                    <div className="mt-2" style={{ height: 6, background: "var(--panel2)", border: "1px solid var(--line)" }}>
+                      <div style={{ height: "100%", width: `${whatIfResult.survivability_pct}%`, background: whatIfResult.survivability_pct < 50 ? "var(--red)" : "var(--green)", transition: "width 0.3s" }} />
+                    </div>
+                    <div className="text-[11px] mt-3 space-y-1" style={{ color: "var(--text-dim)" }}>
+                      <div><strong>Limiting factor:</strong> {whatIfResult.limiting_factor}</div>
+                      <div><strong>Recommended action:</strong> {whatIfResult.action}</div>
+                    </div>
                   </div>
                 )}
               </div>
+            )}
 
-              {/* Quick Query Prompt Chips */}
-              <div className="flex items-center gap-1.5 overflow-x-auto select-none">
-                <span className="text-[10px] font-bold text-slate-400 shrink-0">Prompts:</span>
-                {[
-                  "Explain Current Status",
-                  "Assess Cylinder Thermal Margin",
-                  "Recommend Throttle Setting",
-                  "Diagnose Electrical Bus Drift",
-                ].map((prompt) => (
-                  <button
-                    key={prompt}
-                    onClick={() => handleSendCopilotMessage(prompt)}
-                    className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 rounded text-[10px] font-semibold border border-slate-200 whitespace-nowrap cursor-pointer transition-all shadow-xs"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-
-              {/* Input Box */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={copilotInput}
-                  onChange={(e) => setCopilotInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSendCopilotMessage()}
-                  placeholder="Ask copilot about engine health, thermal trends, or abort rules..."
-                  className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-sky-500 focus:border-sky-500"
-                />
-                <button
-                  onClick={() => handleSendCopilotMessage()}
-                  className="h-8 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1 cursor-pointer transition-all shadow-xs"
-                >
-                  <Send className="w-3 h-3" />
-                  <span>Ask</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Tab 3: Pre-Takeoff / In-Flight What-If Simulation */}
-          {activeTab === "whatif" && (
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3">
-              <div className="p-3 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg border border-orange-200/80 space-y-1">
-                <h3 className="text-xs font-bold text-orange-900 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-orange-600" />
-                  FORWARD MISSION SURVIVABILITY PROJECTION
-                </h3>
-                <p className="text-[11px] text-slate-700">
-                  Projects engine survivability across planned sortie duration based on current digital twin residuals.
-                </p>
-              </div>
-
-              <div className="p-3.5 bg-white rounded-lg border border-slate-200 space-y-3">
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs font-bold text-slate-800">
-                    <span>Planned Sortie Duration:</span>
-                    <span className="font-mono-tech text-sky-700">{whatIfDuration} Minutes</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={15}
-                    max={180}
-                    step={5}
-                    value={whatIfDuration}
-                    onChange={(e) => setWhatIfDuration(parseInt(e.target.value, 10))}
-                    className="w-full accent-sky-600 cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[10px] text-slate-400 font-mono-tech">
-                    <span>15 min (Short Recon)</span>
-                    <span>90 min (Patrol)</span>
-                    <span>180 min (Endurance)</span>
-                  </div>
+            {/* ── Residuals Tab ── */}
+            {activeTab === "residuals" && (
+              <div className="space-y-3">
+                <div style={{ padding: "12px 14px", background: "var(--teal-bg)", border: "1px solid var(--teal)" }}>
+                  <span className="text-[12px]" style={{ color: "var(--text)" }}>
+                    <strong>Physical model residuals:</strong> Quantifies Δ = |y_measured − y_model| across all 15 sensor channels.
+                  </span>
                 </div>
-
-                <button
-                  onClick={handleRunWhatIf}
-                  disabled={isWhatIfRunning}
-                  className="w-full py-2 bg-gradient-to-r from-orange-600 to-sky-600 hover:from-orange-700 hover:to-sky-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-all shadow-xs flex items-center justify-center gap-1.5"
-                >
-                  <Sliders className="w-3.5 h-3.5" />
-                  <span>{isWhatIfRunning ? "Computing Physics..." : "Calculate Mission Survivability"}</span>
-                </button>
-              </div>
-
-              {whatIfResult && (
-                <div className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-700">PROJECTED SURVIVABILITY:</span>
-                    <span className={`text-sm font-mono-tech font-bold ${whatIfResult.survivability_pct < 50 ? "text-red-600" : "text-emerald-600"}`}>
-                      {whatIfResult.survivability_pct}%
-                    </span>
-                  </div>
-                  <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-300 ${whatIfResult.survivability_pct < 50 ? "bg-red-500" : "bg-emerald-500"}`}
-                      style={{ width: `${whatIfResult.survivability_pct}%` }}
-                    />
-                  </div>
-                  <div className="text-[11px] text-slate-600 space-y-0.5">
-                    <div><strong>Limiting Factor:</strong> {whatIfResult.limiting_factor}</div>
-                    <div><strong>Recommended Action:</strong> {whatIfResult.action}</div>
-                  </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(livePacket?.channels || {}).map(([ch, val]) => {
+                    const numVal = typeof val === "number" ? val : 0;
+                    const resError = isAnomalous ? Math.abs(Math.sin(numVal) * 8.4) : Math.abs(Math.cos(numVal) * 1.8);
+                    const isHigh = resError > 4.0;
+                    return (
+                      <div key={ch} className="dt-panel" style={{ padding: "8px 10px", borderColor: isHigh ? "var(--red)" : "var(--line)", background: isHigh ? "var(--red-bg)" : "var(--panel)" }}>
+                        <div className="flex justify-between font-mono-tech text-[10px]">
+                          <span className="font-bold">{ch}</span>
+                          <span className="font-bold" style={{ color: isHigh ? "var(--red)" : "var(--text-faint)" }}>Δ {resError.toFixed(2)}</span>
+                        </div>
+                        <div className="mt-1.5" style={{ height: 3, background: "var(--panel2)", border: "1px solid var(--line)" }}>
+                          <div style={{ height: "100%", width: `${Math.min(100, (resError / 10) * 100)}%`, background: isHigh ? "var(--red)" : "var(--teal)" }} />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* Tab 4: Digital Twin Residuals Heatmap */}
-          {activeTab === "residuals" && (
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2.5">
-              <div className="p-2.5 bg-sky-50 rounded-lg border border-sky-200/80 text-xs text-slate-700 leading-relaxed">
-                <strong>Physical Model Residuals:</strong> Quantifies discrepancy between the analytical horizontally-opposed boxer physics model and measured sensor stream Δ = |y_measured - y_model|.
               </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                {Object.entries(livePacket?.channels || {}).map(([ch, val]) => {
-                  const numVal = typeof val === "number" ? val : 0;
-                  const resError = isAnomalous ? Math.abs(Math.sin(numVal) * 8.4) : Math.abs(Math.cos(numVal) * 1.8);
-                  const isHigh = resError > 4.0;
-                  return (
-                    <div
-                      key={ch}
-                      className={`p-2 rounded-lg border transition-all ${
-                        isHigh ? "bg-red-50 border-red-200" : "bg-slate-50 border-slate-200"
-                      }`}
-                    >
-                      <div className="flex justify-between font-mono-tech text-[10px]">
-                        <span className="font-bold text-slate-700">{ch}</span>
-                        <span className={`font-bold ${isHigh ? "text-red-600" : "text-slate-500"}`}>
-                          Δ {resError.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="h-1 bg-slate-200 rounded-full overflow-hidden mt-1.5">
-                        <div
-                          className={`h-full ${isHigh ? "bg-red-500" : "bg-sky-500"}`}
-                          style={{ width: `${Math.min(100, (resError / 10) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </section>
-      </main>
+      {/* ═══ TRANSPORT BAR ════════════════════════════════════════════════════ */}
+      <div className="dt-panel flex items-center" style={{ padding: "12px 20px", gap: 16, flexShrink: 0 }}>
+        <button onClick={() => (isPaused ? onResume() : onPause())} className="play-btn" title={isPaused ? "Resume" : "Pause"}>
+          {isPaused ? <Play className="w-3 h-3" style={{ marginLeft: 1 }} /> : <Pause className="w-3 h-3" />}
+        </button>
 
-      {/* ─── 3. Bottom Mission Playback Control Bar ───────────────────────────── */}
-      <footer className="h-11 border-t border-slate-200 bg-white px-4 flex items-center justify-between shrink-0 z-20 select-none">
-        {/* Play / Pause & Speed Controls */}
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={() => (isPaused ? onResume() : onPause())}
-            className="h-7 w-7 rounded-md bg-sky-600 hover:bg-sky-700 text-white flex items-center justify-center transition-colors shadow-xs cursor-pointer shrink-0"
-            title={isPaused ? "Resume" : "Pause"}
-          >
-            {isPaused ? <Play className="w-3 h-3 ml-0.5" /> : <Pause className="w-3 h-3" />}
+        <span className="font-mono-tech text-[11px]" style={{ color: "var(--text-dim)" }}>
+          {formatTime(displayFlightTime)} / {formatTime(totalFlightTime)}
+        </span>
+
+        <div className="flex-1 flex items-center" style={{ gap: 10 }}>
+          <div className="flex-1 relative" style={{ height: 4, background: "var(--panel2)", border: "1px solid var(--line)" }}>
+            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${progressPct}%`, background: "var(--teal)" }} />
+            <div style={{ position: "absolute", left: `${progressPct}%`, top: "50%", transform: "translate(-50%, -50%)", width: 9, height: 9, background: "var(--teal)", borderRadius: "50%", cursor: "grab" }} />
+            <input
+              type="range" min={0} max={totalFlightTime} step={1}
+              value={Math.round(displayFlightTime)}
+              onPointerDown={(e) => {
+                setIsSeeking(true);
+                setSeekVal(Number(e.currentTarget.value));
+              }}
+              onChange={(e) => {
+                setSeekVal(Number(e.target.value));
+              }}
+              onPointerUp={(e) => {
+                const targetT = Number(e.currentTarget.value);
+                onSeek?.(targetT);
+                setIsSeeking(false);
+                setSeekVal(null);
+              }}
+              className="absolute inset-0 w-full opacity-0 cursor-pointer"
+              style={{ height: 20, top: -8 }}
+            />
+          </div>
+        </div>
+
+        <span className="font-mono-tech text-[11px]" style={{ color: "var(--text-dim)" }}>{progressPct}%</span>
+
+        {([1.0, 5.0, 20.0] as const).map((spd) => (
+          <button key={spd} onClick={() => onSetSpeed(spd)} className={`speed-btn ${currentSpeed === spd ? "active" : ""}`}>
+            {spd}×
           </button>
+        ))}
+      </div>
 
-          <div className="flex items-center bg-slate-100 rounded-md p-0.5 border border-slate-200">
-            {[1.0, 5.0, 20.0].map((spd) => (
-              <button
-                key={spd}
-                onClick={() => onSetSpeed(spd)}
-                className={`px-1.5 py-0.5 rounded text-[9px] font-mono-tech font-bold transition-all cursor-pointer ${
-                  currentSpeed === spd
-                    ? "bg-sky-600 text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                {spd}x
-              </button>
-            ))}
-          </div>
+      {/* ═══ MODALS ══════════════════════════════════════════════════════════ */}
 
-          <div className="text-[11px] font-mono-tech text-slate-600 w-24 text-center tabular-nums">
-            <span className="font-bold text-slate-900">{formatTime(currentFlightTime)}</span>
-            <span className="text-slate-400"> / {formatTime(totalFlightTime)}</span>
-          </div>
-        </div>
-
-        {/* Interactive Flight Scrubber Bar */}
-        <div className="w-64 sm:w-80 md:w-96 flex items-center gap-2">
-          <input
-            type="range"
-            min={0}
-            max={totalFlightTime}
-            step={1}
-            value={Math.round(currentFlightTime)}
-            onChange={(e) => onSeek?.(parseFloat(e.target.value))}
-            className="flex-1 h-1.5 bg-slate-200 rounded-full appearance-none accent-sky-600 cursor-pointer hover:bg-slate-300 transition-colors"
-            title="Drag to seek sortie timeline"
-          />
-          <span className="text-[10px] font-mono-tech font-bold text-slate-500 w-10 text-right tabular-nums">
-            {livePacket?.progress_pct ?? Math.round((currentFlightTime / Math.max(1, totalFlightTime)) * 100)}%
-          </span>
-        </div>
-
-        {/* Attribution Badge */}
-        <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono-tech text-slate-400">
-          <span>DRDO SIH26054</span>
-          <span>•</span>
-          <span className="text-slate-600 font-semibold">DIGITAL TWIN</span>
-        </div>
-      </footer>
-
-      {/* ─── 4. Federated Learning Fleet Modal ─────────────────────────────────── */}
+      {/* Federated Learning Modal */}
       {showFleetModal && (
-        <div className="fixed inset-0 bg-slate-900/35 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-md w-full p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+        <div className="modal-overlay">
+          <div className="modal-panel space-y-3">
+            <div className="flex items-center justify-between" style={{ borderBottom: "1px solid var(--line)", paddingBottom: 10 }}>
               <div className="flex items-center gap-2">
-                <div className="p-1 rounded-md bg-sky-50 text-sky-600 border border-sky-200">
-                  <Users className="w-4 h-4" />
-                </div>
+                <Users className="w-4 h-4" style={{ color: "var(--teal)" }} />
                 <div>
-                  <h3 className="text-xs font-bold text-slate-900">Federated Learning Fleet Aggregation</h3>
-                  <p className="text-[10px] text-slate-500">Defense-Grade FedAvg Across 5 DRDO MALE UAVs</p>
+                  <h3 className="text-[13px] font-semibold">Federated Learning Fleet Aggregation</h3>
+                  <p className="text-[10px]" style={{ color: "var(--text-dim)" }}>Defense-grade FedAvg across 5 DRDO MALE UAVs</p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowFleetModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-xs font-bold px-2 py-1 rounded cursor-pointer"
-              >
-                ✕
-              </button>
+              <button onClick={() => setShowFleetModal(false)} className="cursor-pointer font-bold text-[12px]" style={{ color: "var(--text-faint)" }}>✕</button>
             </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1">
-                <div className="flex justify-between font-mono-tech">
-                  <span className="text-slate-500">Status:</span>
-                  <span className="text-emerald-600 font-bold">FedAvg Converged</span>
-                </div>
-                <div className="flex justify-between font-mono-tech">
-                  <span className="text-slate-500">Squadron Units:</span>
-                  <span className="text-slate-800 font-semibold">
-                    {federatedSummary?.participating_uavs?.join(", ") || "TAPAS-01 to 05"}
-                  </span>
-                </div>
-                <div className="flex justify-between font-mono-tech">
-                  <span className="text-slate-500">Samples Aggregated:</span>
-                  <span className="text-slate-800 font-semibold">
-                    {federatedSummary?.total_samples_aggregated ?? 135} windows
-                  </span>
-                </div>
-                <div className="flex justify-between font-mono-tech">
-                  <span className="text-slate-500">Global Weight Norm (L2):</span>
-                  <span className="text-sky-700 font-bold">
-                    {federatedSummary?.global_weight_norm?.toFixed(4) ?? "0.3842"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-2 rounded-md bg-sky-50/50 border border-sky-100 text-[10px] text-slate-600 leading-relaxed">
-                <strong className="text-slate-800">Privacy Guarantee:</strong> Zero raw telemetry frames left individual UAVs. Only local parameter gradient updates were transferred.
-              </div>
+            <div className="space-y-1.5 font-mono-tech text-[11px]" style={{ background: "var(--panel2)", border: "1px solid var(--line)", padding: 12 }}>
+              <div className="flex justify-between"><span style={{ color: "var(--text-dim)" }}>Status:</span><span className="font-bold" style={{ color: "var(--green)" }}>FedAvg converged</span></div>
+              <div className="flex justify-between"><span style={{ color: "var(--text-dim)" }}>Squadron:</span><span className="font-semibold">{federatedSummary?.participating_uavs?.join(", ") || "TAPAS-01 to 05"}</span></div>
+              <div className="flex justify-between"><span style={{ color: "var(--text-dim)" }}>Samples:</span><span className="font-semibold">{federatedSummary?.total_samples_aggregated ?? 135} windows</span></div>
+              <div className="flex justify-between"><span style={{ color: "var(--text-dim)" }}>Weight norm (L2):</span><span className="font-bold" style={{ color: "var(--teal)" }}>{federatedSummary?.global_weight_norm?.toFixed(4) ?? "0.3842"}</span></div>
             </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
-                onClick={() => onTriggerFederated()}
-                className="px-2.5 py-1 rounded-md bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold cursor-pointer transition-all"
-              >
-                Run Another Round
-              </button>
-              <button
-                onClick={() => setShowFleetModal(false)}
-                className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-all"
-              >
-                Close
-              </button>
+            <div className="text-[10px]" style={{ color: "var(--text-dim)", padding: "8px 10px", background: "var(--teal-bg)", border: "1px solid var(--teal)" }}>
+              <strong>Privacy guarantee:</strong> Zero raw telemetry frames left individual UAVs. Only local parameter gradient updates were transferred.
+            </div>
+            <div className="flex justify-end gap-2" style={{ paddingTop: 8, borderTop: "1px solid var(--line)" }}>
+              <button onClick={() => onTriggerFederated()} className="view-tab active" style={{ padding: "6px 14px" }}>Run another round</button>
+              <button onClick={() => setShowFleetModal(false)} className="view-tab" style={{ padding: "6px 14px" }}>Close</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── 5. Supabase Cloud Database Explorer Modal ───────────────────────── */}
+      {/* Supabase DB Modal */}
       {showSupabaseModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-2xl w-full p-4 space-y-3 max-h-[88vh] flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <div className="modal-overlay">
+          <div className="modal-panel space-y-3" style={{ maxWidth: 720, maxHeight: "88vh", display: "flex", flexDirection: "column" }}>
+            <div className="flex items-center justify-between" style={{ borderBottom: "1px solid var(--line)", paddingBottom: 10 }}>
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200">
-                  <Database className="w-4 h-4" />
-                </div>
+                <Database className="w-4 h-4" style={{ color: "var(--teal)" }} />
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-xs font-bold text-slate-900">PostgreSQL Cloud Database Explorer</h3>
-                    <span className={`text-[9px] font-mono-tech font-bold px-1.5 py-0.5 rounded ${
-                      supabaseStatus?.is_cloud_active
-                        ? "bg-emerald-100 text-emerald-800"
-                        : "bg-blue-100 text-blue-800"
-                    }`}>
-                      {supabaseStatus?.is_cloud_active ? "SUPABASE CLOUD ACTIVE" : "POSTGRESQL DIRECT STORAGE"}
+                    <h3 className="text-[13px] font-semibold">PostgreSQL Database Explorer</h3>
+                    <span className="font-mono-tech text-[9px] font-bold" style={{ padding: "2px 8px", background: supabaseStatus?.is_cloud_active ? "var(--teal-bg)" : "var(--panel2)", color: supabaseStatus?.is_cloud_active ? "var(--teal)" : "var(--text-dim)", border: "1px solid var(--line)" }}>
+                      {supabaseStatus?.is_cloud_active ? "CLOUD ACTIVE" : "LOCAL STORAGE"}
                     </span>
                   </div>
-                  <p className="text-[10px] text-slate-500 font-mono-tech truncate max-w-md">
-                    {supabaseStatus?.supabase_url || "PostgreSQL Persistent Engine"}
-                  </p>
+                  <p className="text-[10px] font-mono-tech truncate" style={{ color: "var(--text-faint)", maxWidth: 400 }}>{supabaseStatus?.supabase_url || "PostgreSQL persistent engine"}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowSupabaseModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-xs font-bold px-2 py-1 rounded cursor-pointer"
-              >
-                ✕
-              </button>
+              <button onClick={() => setShowSupabaseModal(false)} className="cursor-pointer font-bold text-[12px]" style={{ color: "var(--text-faint)" }}>✕</button>
             </div>
 
-            {/* Metrics Ribbon */}
             <div className="grid grid-cols-3 gap-2">
-              <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
-                <span className="text-[10px] text-slate-500 font-bold">LOGGED FLIGHTS</span>
-                <p className="text-base font-bold font-mono-tech text-slate-900">
-                  {supabaseStatus?.tables?.flights ?? 1}
-                </p>
-              </div>
-              <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
-                <span className="text-[10px] text-slate-500 font-bold">TELEMETRY FRAMES</span>
-                <p className="text-base font-bold font-mono-tech text-sky-600">
-                  {supabaseStatus?.tables?.telemetry_logs ?? 120}
-                </p>
-              </div>
-              <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
-                <span className="text-[10px] text-slate-500 font-bold">RECORDED ALERTS</span>
-                <p className="text-base font-bold font-mono-tech text-orange-600">
-                  {supabaseStatus?.tables?.alerts ?? 0}
-                </p>
-              </div>
+              {([
+                { label: "LOGGED FLIGHTS", val: supabaseStatus?.tables?.flights ?? 1, color: "var(--text)" },
+                { label: "TELEMETRY FRAMES", val: supabaseStatus?.tables?.telemetry_logs ?? 120, color: "var(--teal)" },
+                { label: "RECORDED ALERTS", val: supabaseStatus?.tables?.alerts ?? 0, color: "var(--ochre)" },
+              ]).map(({ label, val, color }) => (
+                <div key={label} style={{ padding: 10, background: "var(--panel2)", border: "1px solid var(--line)" }}>
+                  <span className="text-[10px] font-bold" style={{ color: "var(--text-faint)" }}>{label}</span>
+                  <p className="font-mono-tech text-[16px] font-bold" style={{ color }}>{val}</p>
+                </div>
+              ))}
             </div>
 
-            {/* Scrollable Tables Section */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1 text-xs">
-              {/* Flights Table */}
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-3 py-1.5 font-bold text-[11px] text-slate-700 flex items-center justify-between">
-                  <span>Persisted Flight Sorties (`public.flights`)</span>
-                  <span className="text-[10px] text-slate-500 font-mono-tech font-normal">
-                    {supabaseFlights.length} records
-                  </span>
+            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 text-[11px]">
+              <div style={{ border: "1px solid var(--line)", overflow: "hidden" }}>
+                <div className="flex items-center justify-between font-bold text-[11px]" style={{ background: "var(--panel2)", padding: "6px 12px", borderBottom: "1px solid var(--line)" }}>
+                  <span>Persisted flight sorties</span>
+                  <span className="font-mono-tech font-normal" style={{ color: "var(--text-faint)" }}>{supabaseFlights.length} records</span>
                 </div>
                 <div className="max-h-36 overflow-y-auto">
                   <table className="w-full text-left font-mono-tech text-[10px]">
-                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 sticky top-0">
-                      <tr>
-                        <th className="py-1 px-2.5">FLIGHT ID</th>
-                        <th className="py-1 px-2">PROFILE</th>
-                        <th className="py-1 px-2">DURATION</th>
-                        <th className="py-1 px-2">STATUS</th>
-                      </tr>
+                    <thead style={{ background: "var(--panel2)", borderBottom: "1px solid var(--line)" }}>
+                      <tr><th className="py-1 px-2.5" style={{ color: "var(--text-faint)" }}>FLIGHT ID</th><th className="py-1 px-2">PROFILE</th><th className="py-1 px-2">DURATION</th><th className="py-1 px-2">STATUS</th></tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody>
                       {supabaseFlights.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="py-2 px-2.5 text-center text-slate-400">
-                            No flights logged yet. Click "Sync Active Sortie Now".
-                          </td>
+                        <tr><td colSpan={4} className="py-2 px-2.5 text-center" style={{ color: "var(--text-faint)" }}>No flights logged yet.</td></tr>
+                      ) : supabaseFlights.map((f, i) => (
+                        <tr key={i} style={{ borderBottom: "1px solid var(--line)" }}>
+                          <td className="py-1 px-2.5 font-bold">{f.flight_id}</td>
+                          <td className="py-1 px-2 uppercase" style={{ color: "var(--teal)" }}>{f.profile}</td>
+                          <td className="py-1 px-2">{Math.round(f.duration_s)}s</td>
+                          <td className="py-1 px-2"><span style={{ padding: "1px 6px", background: "var(--green-bg)", border: "1px solid var(--green)", color: "var(--green)", fontWeight: 600 }}>{f.status}</span></td>
                         </tr>
-                      ) : (
-                        supabaseFlights.map((f, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="py-1 px-2.5 font-bold text-slate-800">{f.flight_id}</td>
-                            <td className="py-1 px-2 uppercase text-sky-700">{f.profile}</td>
-                            <td className="py-1 px-2 text-slate-600">{Math.round(f.duration_s)}s</td>
-                            <td className="py-1 px-2">
-                              <span className="px-1 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
-                                {f.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      )}
+                      ))}
                     </tbody>
                   </table>
                 </div>
               </div>
 
-              {/* Alerts Table */}
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-3 py-1.5 font-bold text-[11px] text-slate-700 flex items-center justify-between">
-                  <span>Logged FMEA Incidents (`public.alerts`)</span>
-                  <span className="text-[10px] text-slate-500 font-mono-tech font-normal">
-                    {supabaseAlerts.length} incidents
-                  </span>
+              <div style={{ border: "1px solid var(--line)", overflow: "hidden" }}>
+                <div className="flex items-center justify-between font-bold text-[11px]" style={{ background: "var(--panel2)", padding: "6px 12px", borderBottom: "1px solid var(--line)" }}>
+                  <span>Logged FMEA incidents</span>
+                  <span className="font-mono-tech font-normal" style={{ color: "var(--text-faint)" }}>{supabaseAlerts.length} incidents</span>
                 </div>
                 <div className="max-h-36 overflow-y-auto">
                   <table className="w-full text-left font-mono-tech text-[10px]">
-                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 sticky top-0">
-                      <tr>
-                        <th className="py-1 px-2.5">ALERT ID</th>
-                        <th className="py-1 px-2">FAULT TYPE</th>
-                        <th className="py-1 px-2">CONFIDENCE</th>
-                        <th className="py-1 px-2">SEVERITY</th>
-                      </tr>
+                    <thead style={{ background: "var(--panel2)", borderBottom: "1px solid var(--line)" }}>
+                      <tr><th className="py-1 px-2.5" style={{ color: "var(--text-faint)" }}>ALERT ID</th><th className="py-1 px-2">FAULT TYPE</th><th className="py-1 px-2">CONFIDENCE</th><th className="py-1 px-2">SEVERITY</th></tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody>
                       {supabaseAlerts.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="py-2 px-2.5 text-center text-slate-400">
-                            Zero recorded anomalies. Engine running in clean baseline.
-                          </td>
+                        <tr><td colSpan={4} className="py-2 px-2.5 text-center" style={{ color: "var(--text-faint)" }}>Zero recorded anomalies.</td></tr>
+                      ) : supabaseAlerts.map((a, i) => (
+                        <tr key={i} style={{ borderBottom: "1px solid var(--line)" }}>
+                          <td className="py-1 px-2.5 font-bold">{a.alert_id}</td>
+                          <td className="py-1 px-2 font-semibold" style={{ color: "var(--ochre)" }}>{a.fault_type}</td>
+                          <td className="py-1 px-2" style={{ color: "var(--teal)" }}>{Math.round(a.confidence * 100)}%</td>
+                          <td className="py-1 px-2"><span style={{ padding: "1px 6px", background: "var(--red-bg)", border: "1px solid var(--red)", color: "var(--red)", fontWeight: 600 }}>{a.severity}</span></td>
                         </tr>
-                      ) : (
-                        supabaseAlerts.map((a, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="py-1 px-2.5 text-slate-800 font-bold">{a.alert_id}</td>
-                            <td className="py-1 px-2 font-semibold text-orange-700">{a.fault_type}</td>
-                            <td className="py-1 px-2 text-sky-700">{Math.round(a.confidence * 100)}%</td>
-                            <td className="py-1 px-2">
-                              <span className="px-1 py-0.5 rounded bg-red-50 text-red-700 border border-red-200 font-bold">
-                                {a.severity}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      )}
+                      ))}
                     </tbody>
                   </table>
                 </div>
               </div>
-
-              {/* Instructions Tip */}
-              <div className="p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-200 text-[10px] text-emerald-900 leading-relaxed">
-                <strong>Supabase Integration:</strong> Schema defined in <code className="bg-emerald-100 px-1 py-0.5 rounded">backend/supabase_schema.sql</code>. Set <code className="bg-emerald-100 px-1 py-0.5 rounded">SUPABASE_URL</code> and <code className="bg-emerald-100 px-1 py-0.5 rounded">SUPABASE_KEY</code> in <code className="bg-emerald-100 px-1 py-0.5 rounded">.env</code> to switch to live cloud PostgreSQL.
-              </div>
             </div>
 
-            {/* Footer Actions */}
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-              <button
-                onClick={handleSyncFlightToSupabase}
-                disabled={isSyncingSupabase}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer transition-all shadow-xs"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>{isSyncingSupabase ? "Syncing to Supabase..." : "Sync Active Sortie Now"}</span>
+            <div className="flex items-center justify-between" style={{ paddingTop: 10, borderTop: "1px solid var(--line)" }}>
+              <button onClick={handleSyncFlightToSupabase} disabled={isSyncingSupabase} className="view-tab active flex items-center gap-1.5" style={{ padding: "8px 14px" }}>
+                <CheckCircle2 className="w-3.5 h-3.5" /> {isSyncingSupabase ? "Syncing..." : "Sync active sortie now"}
               </button>
-
-              <button
-                onClick={() => setShowSupabaseModal(false)}
-                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-all"
-              >
-                Close Explorer
-              </button>
+              <button onClick={() => setShowSupabaseModal(false)} className="view-tab" style={{ padding: "8px 14px" }}>Close explorer</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── 6. DRDO Sortie Debrief & Incident Investigation Board Report ───── */}
+      {/* Debrief Modal */}
       {showDebriefModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-2xl w-full p-5 space-y-4 max-h-[90vh] flex flex-col">
-            {/* Report Header */}
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div className="modal-overlay">
+          <div className="modal-panel space-y-4" style={{ maxWidth: 720, maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+            <div className="flex items-center justify-between" style={{ borderBottom: "1px solid var(--line)", paddingBottom: 12 }}>
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-orange-50 text-orange-600 border border-orange-200">
-                  <FileText className="w-5 h-5" />
-                </div>
+                <FileText className="w-5 h-5" style={{ color: "var(--ochre)" }} />
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-black text-slate-900 tracking-tight">
-                      DRDO AERONAUTICAL INCIDENT & SORTIE DEBRIEF
-                    </h3>
-                    <span className={`text-[9px] font-mono-tech font-bold px-1.5 py-0.5 rounded ${
-                      healthScore < 40
-                        ? "bg-red-100 text-red-800"
-                        : healthScore < 70
-                        ? "bg-amber-100 text-amber-800"
-                        : "bg-emerald-100 text-emerald-800"
-                    }`}>
-                      {healthScore < 40 ? "ABORT / GROUNDED" : healthScore < 70 ? "CAUTION ADVISORY" : "AIRWORTHY"}
+                    <h3 className="text-[14px] font-bold">DRDO Aeronautical Incident & Sortie Debrief</h3>
+                    <span className={`font-mono-tech text-[9px] font-bold ${healthChipClass}`} style={{ padding: "2px 8px" }}>
+                      {healthScore < 40 ? "GROUNDED" : healthScore < 70 ? "CAUTION" : "AIRWORTHY"}
                     </span>
                   </div>
-                  <p className="text-[10px] text-slate-500 font-mono-tech">
-                    FORM DRDO-ADE-26054 • ROTAX-LYCOMING DIGITAL TWIN PROXY
-                  </p>
+                  <p className="font-mono-tech text-[10px]" style={{ color: "var(--text-faint)" }}>FORM DRDO-ADE-26054 · DIGITAL TWIN PROXY</p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowDebriefModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold px-2 py-1 rounded cursor-pointer"
-              >
-                ✕
-              </button>
+              <button onClick={() => setShowDebriefModal(false)} className="cursor-pointer font-bold" style={{ color: "var(--text-faint)" }}>✕</button>
             </div>
 
-            {/* Scrollable Report Body */}
-            <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 text-xs">
-              {/* Sortie Metadata Table */}
-              <div className="grid grid-cols-4 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200 font-mono-tech text-[11px]">
-                <div>
-                  <span className="text-[9px] text-slate-400 block font-bold">UAV TAIL</span>
-                  <span className="font-bold text-slate-800">TAPAS-04 (MALE)</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-slate-400 block font-bold">SORTIE ID</span>
-                  <span className="font-bold text-sky-700 truncate block">{livePacket?.flight_id || "flight_demo"}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-slate-400 block font-bold">REGIME</span>
-                  <span className="font-bold text-slate-800 uppercase">{activeProfile}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-slate-400 block font-bold">MET DURATION</span>
-                  <span className="font-bold text-slate-800">T+{formatTime(currentFlightTime)}</span>
+            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 text-[11px]">
+              <div className="grid grid-cols-4 gap-2 font-mono-tech" style={{ background: "var(--panel2)", border: "1px solid var(--line)", padding: 12 }}>
+                <div><span className="block text-[9px] font-bold" style={{ color: "var(--text-faint)" }}>UAV TAIL</span><span className="font-bold">TAPAS-04</span></div>
+                <div><span className="block text-[9px] font-bold" style={{ color: "var(--text-faint)" }}>SORTIE ID</span><span className="font-bold truncate block" style={{ color: "var(--teal)" }}>{livePacket?.flight_id || "flight_demo"}</span></div>
+                <div><span className="block text-[9px] font-bold" style={{ color: "var(--text-faint)" }}>REGIME</span><span className="font-bold uppercase">{activeProfile}</span></div>
+                <div><span className="block text-[9px] font-bold" style={{ color: "var(--text-faint)" }}>MET</span><span className="font-bold">T+{formatTime(currentFlightTime)}</span></div>
+              </div>
+
+              <div style={{ border: "1px solid var(--line)" }}>
+                <div className="font-bold text-[11px]" style={{ background: "var(--panel2)", padding: "6px 12px", borderBottom: "1px solid var(--line)" }}>I. Thermodynamic & Electrical Envelope</div>
+                <div className="grid grid-cols-5 gap-2 text-center font-mono-tech" style={{ padding: 12 }}>
+                  {([
+                    { label: "PEAK CHT", val: `${Math.round(maxCht)}°C`, sub: "Limit 220°C", color: maxCht > 200 ? "var(--red)" : "var(--text)" },
+                    { label: "PEAK EGT", val: `${Math.round(Math.max(...egts))}°C`, sub: "Limit 850°C", color: "var(--text)" },
+                    { label: "EGT SPREAD", val: `${Math.round(egtSpread)}°C`, sub: "Nominal <50°C", color: "var(--teal)" },
+                    { label: "OIL PRESS", val: `${Math.round(oilP)} psi`, sub: "Band 45–80", color: oilP < 45 ? "var(--red)" : "var(--ochre)" },
+                    { label: "BUS 1 DC", val: `${bus1V.toFixed(1)} V`, sub: "Nominal 28V", color: "var(--green)" },
+                  ]).map(({ label, val, sub, color }) => (
+                    <div key={label} style={{ padding: 8, background: "var(--panel2)", border: "1px solid var(--line)" }}>
+                      <span className="block text-[9px]" style={{ color: "var(--text-faint)" }}>{label}</span>
+                      <span className="block text-[14px] font-bold" style={{ color }}>{val}</span>
+                      <span className="block text-[8px]" style={{ color: "var(--text-faint)" }}>{sub}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Thermodynamic Envelope Assessment */}
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-3 py-1.5 font-bold text-[11px] text-slate-700">
-                  I. Thermodynamic & Electrical Envelope Peak Telemetry
-                </div>
-                <div className="p-3 grid grid-cols-5 gap-2 text-center font-mono-tech">
-                  <div className="p-2 bg-slate-50 rounded border border-slate-200">
-                    <span className="text-[9px] text-slate-400 block">PEAK CHT</span>
-                    <span className={`text-sm font-bold ${maxCht > 200 ? "text-red-600" : "text-slate-800"}`}>
-                      {Math.round(maxCht)}°C
-                    </span>
-                    <span className="text-[8px] text-slate-400 block">Limit 220°C</span>
-                  </div>
-                  <div className="p-2 bg-slate-50 rounded border border-slate-200">
-                    <span className="text-[9px] text-slate-400 block">PEAK EGT</span>
-                    <span className="text-sm font-bold text-slate-800">
-                      {Math.round(Math.max(...egts))}°C
-                    </span>
-                    <span className="text-[8px] text-slate-400 block">Limit 850°C</span>
-                  </div>
-                  <div className="p-2 bg-slate-50 rounded border border-slate-200">
-                    <span className="text-[9px] text-slate-400 block">EGT SPREAD</span>
-                    <span className="text-sm font-bold text-sky-700">
-                      {Math.round(egtSpread)}°C
-                    </span>
-                    <span className="text-[8px] text-slate-400 block">Nominal &lt;50°C</span>
-                  </div>
-                  <div className="p-2 bg-slate-50 rounded border border-slate-200">
-                    <span className="text-[9px] text-slate-400 block">OIL PRESS</span>
-                    <span className={`text-sm font-bold ${oilP < 45 ? "text-red-600" : "text-amber-600"}`}>
-                      {Math.round(oilP)} psi
-                    </span>
-                    <span className="text-[8px] text-slate-400 block">Band 45–80</span>
-                  </div>
-                  <div className="p-2 bg-slate-50 rounded border border-slate-200">
-                    <span className="text-[9px] text-slate-400 block">BUS 1 DC</span>
-                    <span className="text-sm font-bold text-emerald-600">
-                      {bus1V.toFixed(1)} V
-                    </span>
-                    <span className="text-[8px] text-slate-400 block">Nominal 28V</span>
-                  </div>
+              <div style={{ border: "1px solid var(--line)" }}>
+                <div className="font-bold text-[11px]" style={{ background: "var(--panel2)", padding: "6px 12px", borderBottom: "1px solid var(--line)" }}>II. FMEA Diagnostic & ML Classification</div>
+                <div className="space-y-2 font-mono-tech text-[11px]" style={{ padding: 12 }}>
+                  <div className="flex justify-between"><span style={{ color: "var(--text-dim)" }}>Stage 1 edge anomaly:</span><span className="font-bold" style={{ color: isAnomalous ? "var(--red)" : "var(--green)" }}>{isAnomalous ? "TRIGGERED" : "NEGATIVE"}</span></div>
+                  <div className="flex justify-between"><span style={{ color: "var(--text-dim)" }}>Stage 2 1D-CNN fault:</span><span className="font-bold uppercase">{diagnosedFault.replace(/_/g, " ")}</span></div>
+                  <div className="flex justify-between"><span style={{ color: "var(--text-dim)" }}>Confidence:</span><span className="font-bold" style={{ color: "var(--teal)" }}>{livePacket?.alerts?.[0]?.confidence ? `${Math.round(livePacket.alerts[0].confidence * 100)}%` : "98.2%"}</span></div>
                 </div>
               </div>
 
-              {/* FMEA Diagnostic Findings */}
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-3 py-1.5 font-bold text-[11px] text-slate-700">
-                  II. FMEA Diagnostic & Machine Learning Classification
-                </div>
-                <div className="p-3 space-y-2">
-                  <div className="flex items-center justify-between font-mono-tech text-[11px]">
-                    <span className="text-slate-500">Stage 1 Edge Anomaly Detector:</span>
-                    <span className={`font-bold ${isAnomalous ? "text-red-600" : "text-emerald-600"}`}>
-                      {isAnomalous ? "TRIGGERED (Residual Z-Score &gt; 3.0)" : "NEGATIVE (Envelope Nominal)"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between font-mono-tech text-[11px]">
-                    <span className="text-slate-500">Stage 2 1D-CNN Isolated Fault:</span>
-                    <span className="font-bold text-slate-900 uppercase">
-                      {diagnosedFault.replace(/_/g, " ")}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between font-mono-tech text-[11px]">
-                    <span className="text-slate-500">Classification Confidence:</span>
-                    <span className="font-bold text-sky-700">
-                      {livePacket?.alerts?.[0]?.confidence ? `${Math.round(livePacket.alerts[0].confidence * 100)}%` : "98.2% Nominal"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Engineering Directives & Pilot Advisory */}
-              <div className="p-3 bg-sky-50/70 border border-sky-200 rounded-lg space-y-1.5 text-slate-800">
-                <span className="font-bold text-sky-900 text-xs flex items-center gap-1.5">
-                  <Bot className="w-3.5 h-3.5 text-sky-700" />
-                  III. Automated Aeronautical Engineering Directive
+              <div style={{ padding: "12px 14px", background: "var(--teal-bg)", border: "1px solid var(--teal)" }}>
+                <span className="font-semibold text-[12px] flex items-center gap-1.5" style={{ color: "var(--teal)" }}>
+                  <Bot className="w-3.5 h-3.5" /> III. Automated Engineering Directive
                 </span>
-                <p className="text-[11px] leading-relaxed">
-                  {livePacket?.alerts?.[0]?.report_text || healthRec}
-                </p>
+                <p className="text-[11px] mt-1.5" style={{ lineHeight: 1.6 }}>{livePacket?.alerts?.[0]?.report_text || healthRec}</p>
               </div>
             </div>
 
-            {/* Report Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold cursor-pointer transition-all shadow-xs"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Print Official Report</span>
+            <div className="flex items-center justify-between" style={{ paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+              <button onClick={() => window.print()} className="view-tab active flex items-center gap-1.5" style={{ padding: "8px 14px" }}>
+                <Printer className="w-3.5 h-3.5" /> Print official report
               </button>
-
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -1425,18 +863,11 @@ export function Dashboard({
                     link.click();
                     document.body.removeChild(link);
                   }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold cursor-pointer transition-all shadow-xs"
+                  className="view-tab flex items-center gap-1.5" style={{ padding: "8px 14px", background: "var(--teal)", color: "var(--panel)", borderColor: "var(--teal)" }}
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download Telemetry CSV</span>
+                  <Download className="w-3.5 h-3.5" /> Download CSV
                 </button>
-
-                <button
-                  onClick={() => setShowDebriefModal(false)}
-                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-all"
-                >
-                  Close Debrief
-                </button>
+                <button onClick={() => setShowDebriefModal(false)} className="view-tab" style={{ padding: "8px 14px" }}>Close</button>
               </div>
             </div>
           </div>

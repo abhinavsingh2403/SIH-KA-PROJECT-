@@ -24,11 +24,13 @@ DEFAULT_POSTGRES_URL = (
 
 
 def _normalize_postgres_url(url: str) -> str:
-    """Ensures modern psycopg3 driver is used for standard postgresql:// URLs."""
+    """Ensures modern psycopg3 driver is used for standard postgresql:// URLs and uses 127.0.0.1 on Windows."""
     if url.startswith('postgres://'):
-        return url.replace('postgres://', 'postgresql+psycopg://', 1)
+        url = url.replace('postgres://', 'postgresql+psycopg://', 1)
     if url.startswith('postgresql://') and '+psycopg' not in url and '+asyncpg' not in url:
-        return url.replace('postgresql://', 'postgresql+psycopg://', 1)
+        url = url.replace('postgresql://', 'postgresql+psycopg://', 1)
+    # Prefer IPv4 127.0.0.1 over localhost to prevent Windows 15-second IPv6 timeout
+    url = url.replace('@localhost:', '@127.0.0.1:')
     return url
 
 
@@ -46,18 +48,23 @@ class DatabaseEngineManager:
 
     def _init_engine(self):
         try:
-            # Try connecting to PostgreSQL
+            # Try connecting to PostgreSQL with 1-second connect_timeout so startup never hangs
+            connect_args = {}
+            if 'psycopg' in self.normalized_url or 'postgresql' in self.normalized_url:
+                connect_args['connect_timeout'] = 1
+
             self.engine = create_engine(
                 self.normalized_url,
+                connect_args=connect_args,
                 poolclass=QueuePool,
-                pool_size=10,
-                max_overflow=20,
-                pool_timeout=3,
+                pool_size=5,
+                max_overflow=10,
+                pool_timeout=1,
                 pool_recycle=300,
-                pool_pre_ping=True,
+                pool_pre_ping=False,
                 echo=False,
             )
-            # Test connectivity
+            # Fast test connectivity
             with self.engine.connect() as conn:
                 conn.execute(text('SELECT 1'))
             

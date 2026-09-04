@@ -24,6 +24,7 @@ export function useTelemetrySocket(url: string = getWsUrl()) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const isMountedRef = useRef(true);
+  const lastKnownTimeRef = useRef<number>(0);
 
   // Keep ref to latest fault/speed for non-stale callbacks
   const stateRef = useRef({
@@ -45,6 +46,8 @@ export function useTelemetrySocket(url: string = getWsUrl()) {
     try {
       if (wsRef.current) {
         try {
+          wsRef.current.onclose = null;
+          wsRef.current.onerror = null;
           wsRef.current.close();
         } catch {
           // ignore
@@ -78,6 +81,7 @@ export function useTelemetrySocket(url: string = getWsUrl()) {
           const msg = JSON.parse(event.data);
           if (msg.type === "telemetry") {
             const pkt = msg as LiveTelemetryPacket;
+            lastKnownTimeRef.current = pkt.t;
             // Ensure local state and incoming telemetry packet stay tightly synchronized
             setPacket({
               ...pkt,
@@ -106,7 +110,7 @@ export function useTelemetrySocket(url: string = getWsUrl()) {
           if (isMountedRef.current) {
             connect();
           }
-        }, 3000);
+        }, 2000);
       };
     } catch {
       if (isMountedRef.current) {
@@ -124,22 +128,26 @@ export function useTelemetrySocket(url: string = getWsUrl()) {
         clearTimeout(reconnectTimeoutRef.current);
       }
       if (wsRef.current) {
+        wsRef.current.onclose = null;
+        wsRef.current.onerror = null;
         wsRef.current.close();
       }
     };
   }, [connect]);
 
-  // Robust fallback local simulation if backend WebSocket is offline or reconnecting
+  // Fallback local simulation if backend WebSocket is offline or reconnecting
   useEffect(() => {
     if (isConnected) return;
 
-    let simTime = 120;
+    // Continue smoothly from last known flight time rather than jumping to 120s
+    let simTime = lastKnownTimeRef.current || 0;
     const tickInterval = 100;
 
     const interval = window.setInterval(() => {
       const { speed, fault, profile, paused } = stateRef.current;
       if (!paused) {
         simTime += (tickInterval / 1000) * speed;
+        lastKnownTimeRef.current = simTime;
       }
 
       const t = simTime;
@@ -197,7 +205,7 @@ export function useTelemetrySocket(url: string = getWsUrl()) {
         mockChannels.E1_CHT4 += 14.0;
       }
 
-      let healthScore = 96.0;
+      let healthScore = 100.0;
       let isAnomalous = false;
       let recommendation = "NOMINAL: Engine health within acceptable flight tolerances.";
 
@@ -290,11 +298,13 @@ export function useTelemetrySocket(url: string = getWsUrl()) {
   };
 
   const seek = (t: number) => {
+    lastKnownTimeRef.current = t;
     sendCommand({ action: "seek", t });
   };
 
   const setProfile = (profile: string) => {
     setSelectedProfile(profile);
+    stateRef.current.profile = profile;
     sendCommand({ action: "set_profile", profile });
   };
 
@@ -304,6 +314,7 @@ export function useTelemetrySocket(url: string = getWsUrl()) {
 
   const injectFault = (fault_type: string, target_cylinder: number = 2, severity: number = 0.85) => {
     setSelectedFault(fault_type);
+    stateRef.current.fault = fault_type;
     sendCommand({ action: "inject_fault", fault_type, target_cylinder, severity });
   };
 

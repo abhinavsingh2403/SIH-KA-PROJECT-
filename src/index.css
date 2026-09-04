@@ -1,20 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 :root {
-  --bg-app: #f8fafc;
-  --bg-surface: #ffffff;
-  --bg-subtle: #f1f5f9;
-  --border-subtle: #e2e8f0;
-  --border-strong: #cbd5e1;
+  --bg: #F7F7F5;
+  --panel: #FFFFFF;
+  --panel2: #F1F1EE;
+  --line: #E4E3DD;
+  --line-strong: #CFCDC4;
+  --text: #1B1F27;
+  --text-dim: #63697A;
+  --text-faint: #9498A3;
 
-  --isro-orange: #ea580c;
-  --isro-saffron: #f97316;
-  --nasa-blue: #0284c7;
-  --nasa-dark: #0f172a;
-
-  --status-nominal: #059669;
-  --status-caution: #d97706;
-  --status-critical: #dc2626;
+  --ochre: #B5730A;
+  --ochre-bg: #FBF1DE;
+  --teal: #0F6E56;
+  --teal-bg: #E4F1EC;
+  --green: #2F7D4F;
+  --green-bg: #E9F5EE;
+  --red: #B23A2E;
+  --red-bg: #FBEAE8;
+  --amber: #A16207;
+  --amber-bg: #FEF3C7;
 }
 
 html, body, #root {
@@ -24,53 +30,129 @@ html, body, #root {
   padding: 0;
   overflow: hidden;
   position: fixed;
-  background-color: #f8fafc;
-  color: #0f172a;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  user-select: none;
-  -webkit-user-select: none;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-/* Aerospace Technical Grid Background */
-.aerospace-grid-bg {
-  background-color: #f8fafc;
-  background-image: 
-    linear-gradient(to right, rgba(226, 232, 240, 0.7) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(226, 232, 240, 0.7) 1px, transparent 1px);
-  background-size: 28px 28px;
-}
-
-/* Clean Aerospace Console Panel */
-.aero-panel {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
-  border-radius: 0.75rem;
-}
-
-/* Technical Monospace Metrics */
+/* ===== Typography ===== */
+.font-body { font-family: 'Space Grotesk', sans-serif; }
 .font-mono-tech {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-feature-settings: "tnum" on, "zero" on;
   font-variant-numeric: tabular-nums;
 }
+.tabular-nums { font-variant-numeric: tabular-nums; }
 
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
+/* ===== Panel System ===== */
+.dt-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
 }
 
-/* Custom Scrollbar for Telemetry Panels */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+/* ===== Custom Scrollbar ===== */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: var(--panel2); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--line-strong); }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+
+/* ===== Health Chip Variants ===== */
+.chip-ok { color: var(--green); border: 1px solid var(--green); background: var(--green-bg); }
+.chip-warn { color: var(--amber); border: 1px solid var(--amber); background: var(--amber-bg); }
+.chip-abort { color: var(--red); border: 1px solid var(--red); background: var(--red-bg); }
+
+/* ===== Fault Button ===== */
+.fault-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f5f9;
+.fault-btn:hover { border-color: var(--text-dim); color: var(--text); }
+.fault-btn.active { background: var(--text); color: var(--panel); border-color: var(--text); }
+.fault-btn.clean { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+
+/* ===== View Tab Buttons ===== */
+.view-tab {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+.view-tab:hover { color: var(--text); border-color: var(--line-strong); }
+.view-tab.active { background: var(--text); color: var(--panel); border-color: var(--text); }
+
+/* ===== Speed Button ===== */
+.speed-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+.speed-btn:hover { border-color: var(--text-dim); }
+.speed-btn.active { background: var(--text); color: var(--panel); border-color: var(--text); }
+
+/* ===== Play Button ===== */
+.play-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+.play-btn:hover { border-color: var(--text-dim); background: var(--panel); }
+
+/* ===== Advisory ===== */
+.advisory-box {
+  border: 1px solid var(--line-strong);
+  background: var(--panel2);
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.advisory-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  padding: 3px 8px;
+  white-space: nowrap;
+  border: 1px solid;
+}
+
+/* ===== Modal Overlay ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(27, 31, 39, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 16px;
+}
+.modal-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  max-width: 640px;
+  width: 100%;
+  padding: 20px;
+  max-height: 88vh;
+  overflow-y: auto;
 }

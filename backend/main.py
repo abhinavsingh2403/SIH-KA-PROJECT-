@@ -426,6 +426,7 @@ async def websocket_telemetry_stream(
     Streams second-by-second telemetry packets at adjustable playback speeds (1x, 5x, 20x).
     Accepts control commands: pause, resume, set_speed, seek, inject_fault.
     """
+    global _flights, _alerts, _faults
     await websocket.accept()
 
     # If demo or flight_id not found, create a 10-minute demo flight
@@ -470,6 +471,8 @@ async def websocket_telemetry_stream(
                         _flights[flight_id] = clean_flight
                         flight = clean_flight
                         _alerts[flight_id] = []
+                        for k in [k for k, v in _faults.items() if v.get("flight_id") == flight_id]:
+                            _faults.pop(k, None)
                     else:
                         modified, meta = inject_fault(
                             flight_data=flight,
@@ -482,17 +485,19 @@ async def websocket_telemetry_stream(
                         flight = modified
                         _faults[meta["fault_id"]] = meta
 
+                        slope = 0.8 if fault_type == "cylinder_head_overheat" else 0.4
                         alert = alerting_engine.evaluate_alert(
                             flight_id=flight_id,
                             timestamp=float(flight.timestamps[current_t_idx]),
                             fault_type=fault_type,
                             stage1_confidence=0.97,
                             stage2_confidence=0.94,
+                            max_residual_slope=slope,
                             key_sensors=meta["affected_channels"],
                         )
                         alert.report_text = copilot_service.generate_report(alert)
                         _alerts[flight_id] = [alert]
-                        supabase_service.save_alert(alert.model_dump())
+                        asyncio.create_task(asyncio.to_thread(supabase_service.save_alert, alert.model_dump()))
 
                 elif action == "set_profile":
                     new_profile = cmd.get("profile", "patrol")
@@ -500,7 +505,7 @@ async def websocket_telemetry_stream(
                     _flights[flight_id] = new_flight
                     flight = new_flight
                     _alerts[flight_id] = []
-                    current_t_idx = max(60, min(current_t_idx, flight.num_samples - 1))
+                    current_t_idx = max(0, min(current_t_idx, flight.num_samples - 1))
 
                 elif action == "trigger_federated":
                     fleet_summary = fleet_aggregator.execute_federated_round(
@@ -549,7 +554,7 @@ async def websocket_telemetry_stream(
                 }
                 await websocket.send_json(packet)
                 if current_t_idx % 25 == 0:
-                    supabase_service.save_telemetry_packet(packet)
+                    asyncio.create_task(asyncio.to_thread(supabase_service.save_telemetry_packet, packet))
                 current_t_idx += 1
 
             # Playback delay throttled by speed multiplier
@@ -562,6 +567,8 @@ async def websocket_telemetry_stream(
 
     except (WebSocketDisconnect, ConnectionResetError, asyncio.CancelledError):
         pass
+    except Exception as err:
+        print(f"[WARN] WebSocket telemetry stream error: {err}")
 
 
 # ─── 2.12 MAVLink / Autopilot Ingestion Protocol ────────────────────────────────

@@ -42,8 +42,18 @@ class MissionRiskScorer:
         """
         score = 100.0
 
+        # Specific calibrated FMEA degradation penalties matching digital twin physics
+        fault_penalties = {
+            "oil_cooler_degradation": 42.0,      # Yields 58.0% (Warning)
+            "cylinder_head_overheat": 48.0,      # Yields 52.0% (Critical)
+            "alternator_rectifier_drift": 36.0,  # Yields 64.0% (Caution)
+            "fuel_flow_oscillation": 32.0,       # Yields 68.0% (Caution)
+        }
+
         for alert in alerts:
-            if alert.severity == AlertSeverity.critical:
+            if alert.fault_type in fault_penalties:
+                score -= fault_penalties[alert.fault_type]
+            elif alert.severity == AlertSeverity.critical:
                 score -= 30.0
             elif alert.severity == AlertSeverity.warning:
                 score -= 15.0

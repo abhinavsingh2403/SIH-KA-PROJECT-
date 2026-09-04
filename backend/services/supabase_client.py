@@ -123,27 +123,30 @@ class SupabaseService:
         return self.repo.get_flights(limit=limit)
 
     def save_telemetry_packet(self, packet: Dict[str, Any]) -> bool:
-        """Saves a telemetry frame to PostgreSQL."""
-        success = self.repo.save_telemetry_packet(packet)
+        """Saves a telemetry frame to PostgreSQL safely without raising exceptions."""
+        try:
+            success = self.repo.save_telemetry_packet(packet)
 
-        if self.client:
-            try:
-                risk = packet.get('mission_risk', {})
-                health_score = float(risk.get('health_score', 100.0) if isinstance(risk, dict) else 100.0)
-                self.client.table('telemetry_logs').insert({
-                    'flight_id': packet.get('flight_id', 'flight_demo'),
-                    'timestamp_s': float(packet.get('t', 0.0)),
-                    'rpm': float(packet.get('rpm', 2400.0)),
-                    'health_score': health_score,
-                    'stage1_anomaly': bool(packet.get('stage1_anomaly', False)),
-                    'stage2_fault': str(packet.get('stage2_fault', 'normal')),
-                    'channels': packet.get('channels', {}),
-                    'created_at': datetime.now(timezone.utc).isoformat() + 'Z',
-                }).execute()
-            except Exception:
-                pass
+            if self.client:
+                try:
+                    risk = packet.get('mission_risk', {})
+                    health_score = float(risk.get('health_score', 100.0) if isinstance(risk, dict) else 100.0)
+                    self.client.table('telemetry_logs').insert({
+                        'flight_id': packet.get('flight_id', 'flight_demo'),
+                        'timestamp_s': float(packet.get('t', 0.0)),
+                        'rpm': float(packet.get('rpm', 2400.0)),
+                        'health_score': health_score,
+                        'stage1_anomaly': bool(packet.get('stage1_anomaly', False)),
+                        'stage2_fault': str(packet.get('stage2_fault', 'normal')),
+                        'channels': packet.get('channels', {}),
+                        'created_at': datetime.now(timezone.utc).isoformat() + 'Z',
+                    }).execute()
+                except Exception:
+                    pass
 
-        return success
+            return success
+        except Exception:
+            return False
 
     def save_alert(self, alert_data: Dict[str, Any]) -> bool:
         """Saves an alert and associated diagnostic debrief in PostgreSQL."""

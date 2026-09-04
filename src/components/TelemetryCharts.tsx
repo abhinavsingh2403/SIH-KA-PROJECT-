@@ -126,8 +126,8 @@ function MultiLineChart({
             <Icon className="w-3.5 h-3.5" />
           </div>
           <div>
-            <h3 className="text-[12px] font-bold tracking-tight leading-none" style={{ color: "var(--text)" }}>{title}</h3>
-            <p className="font-mono-tech text-[9.5px] leading-tight mt-0.5" style={{ color: "var(--text-faint)" }}>{subtitle}</p>
+            <h3 className="text-[12px] font-bold tracking-tight leading-none truncate max-w-[210px]" style={{ color: "var(--text)" }}>{title}</h3>
+            <p className="font-mono-tech text-[9.5px] leading-tight mt-0.5 truncate max-w-[210px]" style={{ color: "var(--text-faint)" }}>{subtitle}</p>
           </div>
         </div>
 
@@ -413,8 +413,8 @@ export function TelemetryCharts({
     <div className="space-y-2.5">
       {/* 1. CHT 4-Cylinder Thermal Plot */}
       <MultiLineChart
-        title="Cylinder Head Temperatures (CHT1 - CHT4)"
-        subtitle="Horizontally-Opposed 4-Cylinder Thermal Gradient"
+        title="Cylinder Head Temps (CHT 1–4)"
+        subtitle="Horizontally-Opposed Boxer Thermal Gradient"
         icon={Flame}
         series={chtSeries}
         history={history}
@@ -428,8 +428,8 @@ export function TelemetryCharts({
 
       {/* 2. Oil System Coupled Dynamics */}
       <MultiLineChart
-        title="Engine Lubrication Dynamics"
-        subtitle="E1_OilT (°C) vs E1_OilP (psi) Viscosity Coupling"
+        title="Lubrication Dynamics (OilT / OilP)"
+        subtitle="E1_OilT (°C) vs E1_OilP (psi) Coupled Margin"
         icon={Droplets}
         series={oilSeries}
         history={history}
@@ -440,8 +440,8 @@ export function TelemetryCharts({
 
       {/* 3. EGT Exhaust Gas Temperatures */}
       <MultiLineChart
-        title="Exhaust Gas Temperatures (EGT1 - EGT4)"
-        subtitle="Combustion Distribution Across Exhaust Runners"
+        title="Exhaust Gas Temps (EGT 1–4)"
+        subtitle="Combustion Exhaust Distribution"
         icon={Activity}
         series={egtSeries}
         history={history}

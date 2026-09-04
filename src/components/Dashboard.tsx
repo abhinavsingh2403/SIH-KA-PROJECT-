@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Scene3D, type SceneConfig } from "./Scene3D";
 import { TelemetryCharts } from "./TelemetryCharts";
+import { SihLogo } from "./SihLogo";
 import { type LiveTelemetryPacket, type FederatedSummary } from "../types/telemetry";
 
 interface DashboardProps {
@@ -248,7 +249,7 @@ export function Dashboard({
           {/* Brand */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center text-white font-bold text-[11px]" style={{ width: 36, height: 36, background: "var(--text)", letterSpacing: "0.12em" }}>SIH</div>
+              <SihLogo className="w-10 h-10 shrink-0 drop-shadow-sm" />
               <div>
                 <div className="text-[16px] font-bold" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>DRDO MALE UAV Digital Twin</div>
                 <div className="font-mono-tech text-[10.5px]" style={{ color: "var(--text-faint)", letterSpacing: "0.02em" }}>AERO PISTON ENGINE · 15 CHANNELS · REAL-TIME</div>
@@ -329,7 +330,7 @@ export function Dashboard({
       </header>
 
       {/* ═══ MAIN GRID ═══════════════════════════════════════════════════════ */}
-      <div className="flex-1 min-h-0" style={{ display: "grid", gridTemplateColumns: "1.15fr 1fr", gap: 14 }}>
+      <div className="flex-1 min-h-0" style={{ display: "grid", gridTemplateColumns: "1fr 1.08fr", gap: 14 }}>
 
         {/* ─── LEFT: 3D Digital Twin ──────────────────────────────────────── */}
         <div className="dt-panel flex flex-col" style={{ padding: "18px 20px" }}>
@@ -399,45 +400,50 @@ export function Dashboard({
           </div>
 
           {/* Fault Injection Row */}
-          <div className="flex items-center gap-2 flex-wrap" style={{ marginTop: 14 }}>
-            <span className="flex items-center gap-1.5 font-mono-tech text-[10.5px] uppercase font-semibold" style={{ color: "var(--text-faint)", letterSpacing: "0.04em", marginRight: 4 }}>
-              <AlertTriangle className="w-3.5 h-3.5" style={{ color: "var(--ochre)" }} />
-              FMEA Fault Inject
+          <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto" style={{ marginTop: 12 }}>
+            <span className="flex items-center gap-1 font-mono-tech text-[10px] uppercase font-semibold shrink-0" style={{ color: "var(--text-faint)", letterSpacing: "0.04em", marginRight: 2 }}>
+              <AlertTriangle className="w-3 h-3" style={{ color: "var(--ochre)" }} />
+              Fault:
             </span>
             <button
               onClick={() => onInjectFault("normal")}
-              className={`fault-btn flex items-center gap-1.5 ${diagnosedFault === "normal" ? "clean" : ""}`}
+              className={`fault-btn flex items-center gap-1 shrink-0 ${diagnosedFault === "normal" ? "clean" : ""}`}
+              style={{ padding: "5px 9px", fontSize: "10.5px" }}
             >
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: diagnosedFault === "normal" ? "var(--green)" : "var(--text-faint)", boxShadow: diagnosedFault === "normal" ? "0 0 5px var(--green)" : "none" }} />
               Clean
             </button>
             <button
               onClick={() => onInjectFault("cylinder_head_overheat", 2, 0.9)}
-              className={`fault-btn flex items-center gap-1.5 ${diagnosedFault === "cylinder_head_overheat" ? "active" : ""}`}
+              className={`fault-btn flex items-center gap-1 shrink-0 ${diagnosedFault === "cylinder_head_overheat" ? "active" : ""}`}
+              style={{ padding: "5px 9px", fontSize: "10.5px" }}
             >
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: diagnosedFault === "cylinder_head_overheat" ? "var(--red)" : "var(--text-faint)", boxShadow: diagnosedFault === "cylinder_head_overheat" ? "0 0 5px var(--red)" : "none" }} />
               Cyl 2 Overheat
             </button>
             <button
               onClick={() => onInjectFault("oil_cooler_degradation", undefined, 0.85)}
-              className={`fault-btn flex items-center gap-1.5 ${diagnosedFault === "oil_cooler_degradation" ? "active" : ""}`}
+              className={`fault-btn flex items-center gap-1 shrink-0 ${diagnosedFault === "oil_cooler_degradation" ? "active" : ""}`}
+              style={{ padding: "5px 9px", fontSize: "10.5px" }}
             >
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: diagnosedFault === "oil_cooler_degradation" ? "var(--ochre)" : "var(--text-faint)", boxShadow: diagnosedFault === "oil_cooler_degradation" ? "0 0 5px var(--ochre)" : "none" }} />
               Oil Loss
             </button>
             <button
               onClick={() => onInjectFault("alternator_rectifier_drift", undefined, 0.8)}
-              className={`fault-btn flex items-center gap-1.5 ${diagnosedFault === "alternator_rectifier_drift" ? "active" : ""}`}
+              className={`fault-btn flex items-center gap-1 shrink-0 ${diagnosedFault === "alternator_rectifier_drift" ? "active" : ""}`}
+              style={{ padding: "5px 9px", fontSize: "10.5px" }}
             >
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: diagnosedFault === "alternator_rectifier_drift" ? "var(--amber)" : "var(--text-faint)", boxShadow: diagnosedFault === "alternator_rectifier_drift" ? "0 0 5px var(--amber)" : "none" }} />
-              Alternator Sag
+              Alt Sag
             </button>
             <button
               onClick={() => onInjectFault("fuel_flow_oscillation", undefined, 0.75)}
-              className={`fault-btn flex items-center gap-1.5 ${diagnosedFault === "fuel_flow_oscillation" ? "active" : ""}`}
+              className={`fault-btn flex items-center gap-1 shrink-0 ${diagnosedFault === "fuel_flow_oscillation" ? "active" : ""}`}
+              style={{ padding: "5px 9px", fontSize: "10.5px" }}
             >
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: diagnosedFault === "fuel_flow_oscillation" ? "var(--amber)" : "var(--text-faint)", boxShadow: diagnosedFault === "fuel_flow_oscillation" ? "0 0 5px var(--amber)" : "none" }} />
-              Fuel Starvation
+              Fuel Starve
             </button>
           </div>
         </div>

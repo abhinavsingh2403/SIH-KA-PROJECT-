@@ -170,3 +170,33 @@ export interface FederatedSummary {
   collective_faults_learned: string[];
 }
 
+// ─── Six Degrees of Freedom (6-DOF) Flight Dynamics & Inertial Navigation ───────
+
+export interface SixDofState {
+  // Rotational Degrees of Freedom (Euler Angles & Angular Rates)
+  roll: number;              // phi: Bank angle in degrees (-180° to +180°)
+  pitch: number;             // theta: Elevation / Climb angle in degrees (-90° to +90°)
+  yaw: number;               // psi: Heading / Azimuth in degrees (0° to 360°)
+  rollRate: number;          // p: Roll rate (deg/s)
+  pitchRate: number;         // q: Pitch rate (deg/s)
+  yawRate: number;           // r: Yaw rate (deg/s)
+
+  // Translational Degrees of Freedom (Linear Accelerations & Velocities)
+  surgeAx: number;           // a_x: Longitudinal / Forward thrust acceleration (g)
+  swayAy: number;            // a_y: Lateral / Cross-axis acceleration (g)
+  heaveAz: number;           // a_z: Normal / Vertical load factor (g)
+  airspeedKts: number;       // V_TAS: True Airspeed (knots)
+  verticalSpeedFpm: number;  // V_z: Vertical rate of climb / descent (ft/min)
+  sideslipBeta: number;      // beta: Sideslip angle (deg)
+
+  // Aeromechanical & Engine Coupled Interaction
+  torqueRollReaction: number;    // tau_x: Counter-torque roll moment from propeller (N·m)
+  gyroPrecessionMoment: number;  // M_gyro: Precession moment from rotating prop inertia (N·m)
+  mountVibrationRms: {
+    x: number;               // Longitudinal vibration (mm/s RMS)
+    y: number;               // Transverse vibration (mm/s RMS)
+    z: number;               // Vertical vibration (mm/s RMS)
+  };
+  isAutopilotCoupled: boolean;
+}
+

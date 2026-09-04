@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   AlertTriangle,
   Play,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Scene3D, type SceneConfig } from "./Scene3D";
 import { TelemetryCharts } from "./TelemetryCharts";
+import { SixDofView } from "./SixDofView";
 import { SihLogo } from "./SihLogo";
 import {
   DebriefTacticalIcon,
@@ -25,8 +26,13 @@ import {
   MissionForecastIcon,
   LiveStreamWaveIcon,
   ResidualDeltaIcon,
+  SixDofGimbalIcon,
 } from "./AerospaceIcons";
-import { type LiveTelemetryPacket, type FederatedSummary } from "../types/telemetry";
+import {
+  type LiveTelemetryPacket,
+  type FederatedSummary,
+  type SixDofState,
+} from "../types/telemetry";
 
 interface DashboardProps {
   config: SceneConfig;
@@ -69,7 +75,7 @@ const INITIAL_PACKET: LiveTelemetryPacket = {
   speed: 1.0,
 };
 
-type RightPaneTab = "telemetry" | "residuals" | "copilot" | "whatif";
+type RightPaneTab = "telemetry" | "sixdof" | "residuals" | "copilot" | "whatif";
 
 export function Dashboard({
   config, livePacket, federatedSummary, isConnected,
@@ -98,6 +104,26 @@ export function Dashboard({
   const [showDebriefModal, setShowDebriefModal] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
   const [seekVal, setSeekVal] = useState<number | null>(null);
+
+  // ─── 6-DOF Inertial Flight Dynamics Simulation & State ─────────────────────────
+  const [manualSixDof, setManualSixDof] = useState<SixDofState>({
+    roll: 0,
+    pitch: 0,
+    yaw: 84,
+    rollRate: 0,
+    pitchRate: 0,
+    yawRate: 0,
+    surgeAx: 0.02,
+    swayAy: -0.01,
+    heaveAz: 1.0,
+    airspeedKts: 76,
+    verticalSpeedFpm: 0,
+    sideslipBeta: -0.2,
+    torqueRollReaction: 48.2,
+    gyroPrecessionMoment: 12.4,
+    mountVibrationRms: { x: 2.8, y: 3.1, z: 2.4 },
+    isAutopilotCoupled: true,
+  });
 
   useEffect(() => { if (livePacket) setHistory((prev) => [...prev.slice(1), livePacket]); }, [livePacket]);
 
@@ -129,6 +155,93 @@ export function Dashboard({
         : diagnosedFault === "alternator_rectifier_drift" ? "CAUTION: Bus 1 voltage drop and current surge. Alternator rectifier diode degradation suspected."
         : diagnosedFault === "fuel_flow_oscillation" ? "CAUTION: Fuel flow hunting and pressure oscillations. Fuel metering unit stick-slip suspected."
         : "CAUTION: Parameter divergence detected on engine subsystem.");
+
+  // Derived or manual 6-DOF state
+  const sixDofState: SixDofState = useMemo(() => {
+    if (!manualSixDof.isAutopilotCoupled) {
+      return manualSixDof;
+    }
+
+    const t = livePacket?.t ?? 0;
+    const rpm = currentRPM || 2420;
+    const isOverheat = diagnosedFault === "cylinder_head_overheat";
+    const isOscillation = diagnosedFault === "fuel_flow_oscillation";
+    const isOilFault = diagnosedFault === "oil_cooler_degradation";
+
+    let basePitch = 1.8;
+    let baseAirspeed = 78;
+    let baseSurgeAx = 0.02;
+    let baseHeaveAz = 1.0;
+    let baseVerticalSpeed = 0;
+
+    if (activeProfile === "climb") {
+      basePitch = 7.8 + Math.sin(t * 0.25) * 0.4;
+      baseAirspeed = 88;
+      baseSurgeAx = 0.24;
+      baseHeaveAz = 1.08;
+      baseVerticalSpeed = 820;
+    } else if (activeProfile === "cruise") {
+      basePitch = 1.2 + Math.sin(t * 0.15) * 0.2;
+      baseAirspeed = 112;
+      baseSurgeAx = 0.0;
+      baseHeaveAz = 1.0;
+      baseVerticalSpeed = 0;
+    } else if (activeProfile === "combat_burst") {
+      basePitch = 4.2 + Math.sin(t * 0.3) * 0.5;
+      baseAirspeed = 138;
+      baseSurgeAx = 0.38;
+      baseHeaveAz = 1.15;
+      baseVerticalSpeed = 1250;
+    } else {
+      // patrol
+      basePitch = 1.8 + Math.sin(t * 0.2) * 0.3;
+      baseAirspeed = 76;
+      baseSurgeAx = 0.02;
+      baseHeaveAz = 1.0;
+      baseVerticalSpeed = 0;
+    }
+
+    let rollAngle = activeProfile === "patrol" ? Math.sin(t * 0.1) * 5.8 : -0.6;
+    if (isOverheat) {
+      rollAngle += Math.sin(t * 8.0) * 0.8;
+    }
+
+    let surge = baseSurgeAx;
+    if (isOscillation) {
+      surge += Math.sin(t * 2.5) * 0.08;
+    }
+
+    const yawAngle = activeProfile === "patrol"
+      ? ((82 + t * 0.6) % 360)
+      : (84 + Math.sin(t * 0.1) * 1.5);
+
+    const torque = (rpm / 2400) * (isOilFault ? 41.5 : 48.2);
+    const gyro = Math.abs(basePitch) * 1.8 + 8.4;
+    const vibFactor = isOverheat ? 3.4 : isOscillation ? 2.5 : isOilFault ? 1.8 : 1.0;
+
+    return {
+      roll: rollAngle,
+      pitch: basePitch,
+      yaw: yawAngle,
+      rollRate: activeProfile === "patrol" ? Math.cos(t * 0.1) * 0.58 : 0.05,
+      pitchRate: Math.cos(t * 0.2) * 0.08,
+      yawRate: activeProfile === "patrol" ? 0.6 : 0.02,
+      surgeAx: surge,
+      swayAy: -0.015 + Math.sin(t * 0.15) * 0.01,
+      heaveAz: baseHeaveAz + Math.sin(t * 0.3) * 0.02,
+      airspeedKts: baseAirspeed,
+      verticalSpeedFpm: baseVerticalSpeed,
+      sideslipBeta: -0.25 + Math.sin(t * 0.15) * 0.2,
+      torqueRollReaction: torque,
+      gyroPrecessionMoment: gyro,
+      mountVibrationRms: {
+        x: 2.8 * vibFactor,
+        y: 3.1 * vibFactor,
+        z: 2.4 * vibFactor,
+      },
+      isAutopilotCoupled: true,
+    };
+  }, [manualSixDof, livePacket?.t, currentRPM, activeProfile, diagnosedFault]);
 
   const formatTime = (secs: number) => {
     const clamped = Math.max(0, Math.round(secs));
@@ -384,15 +497,15 @@ export function Dashboard({
           <div className="flex-1 min-h-0 relative overflow-hidden" style={{ background: "var(--panel2)", border: "1px solid var(--line)" }}>
             <div className="radar-scanline" />
             <Scene3D
-              config={config}
+              config={{
+                ...config,
+                sixDofState,
+                sixDofFlightPose: config.sixDofFlightPose ?? true,
+              }}
               livePacket={livePacket}
               onSelectCylinder={(id) => onChange({ selectedCylinder: config.selectedCylinder === id ? null : id })}
+              onToggleSixDofPose={() => onChange({ sixDofFlightPose: config.sixDofFlightPose === false ? true : false })}
             />
-
-            {/* Spatial Axis Coordinate Watermark */}
-            <div className="absolute bottom-2 left-3 font-mono-tech text-[9px] pointer-events-none select-none tracking-widest" style={{ color: "var(--text-faint)", opacity: 0.7 }}>
-              X: 0.00 · Y: +1.42 · Z: -0.38 [WGS-84 DRDO TEST CELL]
-            </div>
 
             {/* RPM Overlay */}
             <div className="absolute top-3 left-3 shadow-xs" style={{ padding: "8px 12px", background: "rgba(255, 255, 255, 0.88)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid var(--line)" }}>
@@ -496,6 +609,7 @@ export function Dashboard({
           <div className="flex items-center flex-nowrap overflow-x-auto custom-scrollbar" style={{ gap: 4, flexShrink: 0 }}>
             {([
               { id: "telemetry" as const, label: "Live Telemetry", Icon: LiveStreamWaveIcon, color: "#0B8F46" },
+              { id: "sixdof" as const, label: "6-DOF Flight", Icon: SixDofGimbalIcon, color: "#0284C7" },
               { id: "copilot" as const, label: "AI Copilot", Icon: TacticalCopilotIcon, color: "#FF681F" },
               { id: "whatif" as const, label: "What-If", Icon: MissionForecastIcon, color: "#0284C7" },
               { id: "residuals" as const, label: "Residuals", Icon: ResidualDeltaIcon, color: "#E11D48" },
@@ -548,6 +662,15 @@ export function Dashboard({
                 history={history}
                 selectedCylinder={config.selectedCylinder}
                 onSelectCylinder={(id) => onChange({ selectedCylinder: config.selectedCylinder === id ? null : id })}
+              />
+            )}
+
+            {/* ── 6-DOF Flight Dynamics Tab ── */}
+            {activeTab === "sixdof" && (
+              <SixDofView
+                state={sixDofState}
+                onUpdateState={(updater) => setManualSixDof(updater)}
+                engineRpm={currentRPM}
               />
             )}
 

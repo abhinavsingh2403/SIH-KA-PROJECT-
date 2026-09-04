@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, Environment, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
-import { type LiveTelemetryPacket } from "../types/telemetry";
+import { type LiveTelemetryPacket, type SixDofState } from "../types/telemetry";
 
 export type RenderMode = "solid" | "flir" | "xray";
 export type CameraPreset = "iso" | "top" | "side" | "front";
@@ -19,6 +19,8 @@ export interface SceneConfig {
   explodedView: boolean;
   renderMode?: RenderMode;
   cameraPreset?: CameraPreset;
+  sixDofFlightPose?: boolean;
+  sixDofState?: SixDofState;
 }
 
 // Aerospace Palettes
@@ -326,6 +328,44 @@ function AeroPistonEngine({
 
     // Explode alternator upward
     if (altRef.current) altRef.current.position.y = 1.05 + exp * 0.9;
+
+    // 6-DOF Dynamic Flight Pose & Mount Vibration Coupling
+    const sixDof = config.sixDofState;
+    const is6DofActive = config.sixDofFlightPose !== false && sixDof !== undefined;
+
+    if (engineRef.current) {
+      if (is6DofActive && sixDof) {
+        // Rotational 3-DOF: Pitch (X), Yaw (Y), Roll (Z)
+        const targetPitch = THREE.MathUtils.degToRad(-sixDof.pitch);
+        const targetRoll = THREE.MathUtils.degToRad(-sixDof.roll);
+        const targetYaw = THREE.MathUtils.degToRad(((sixDof.yaw - 90) % 360) * 0.12);
+
+        engineRef.current.rotation.x = THREE.MathUtils.lerp(engineRef.current.rotation.x, targetPitch, delta * 4.0);
+        engineRef.current.rotation.z = THREE.MathUtils.lerp(engineRef.current.rotation.z, targetRoll, delta * 4.0);
+        engineRef.current.rotation.y = THREE.MathUtils.lerp(engineRef.current.rotation.y, targetYaw, delta * 4.0);
+
+        // Translational 3-DOF: Heave (Y), Surge (Z), Sway (X)
+        const targetY = (sixDof.heaveAz - 1.0) * 0.15;
+        const targetZ = sixDof.surgeAx * 0.12;
+        const targetX = sixDof.swayAy * 0.15;
+
+        // Tri-axial mount vibration jitter (elevated during misfire/hunting)
+        const vibX = (Math.random() - 0.5) * (sixDof.mountVibrationRms.x / 1000);
+        const vibY = (Math.random() - 0.5) * (sixDof.mountVibrationRms.y / 1000);
+
+        engineRef.current.position.y = THREE.MathUtils.lerp(engineRef.current.position.y, targetY + vibY, delta * 4.0);
+        engineRef.current.position.z = THREE.MathUtils.lerp(engineRef.current.position.z, targetZ, delta * 4.0);
+        engineRef.current.position.x = THREE.MathUtils.lerp(engineRef.current.position.x, targetX + vibX, delta * 4.0);
+      } else {
+        // Return smoothly to level CAD workbench orientation
+        engineRef.current.rotation.x = THREE.MathUtils.lerp(engineRef.current.rotation.x, 0, delta * 5.0);
+        engineRef.current.rotation.z = THREE.MathUtils.lerp(engineRef.current.rotation.z, 0, delta * 5.0);
+        engineRef.current.rotation.y = THREE.MathUtils.lerp(engineRef.current.rotation.y, 0, delta * 5.0);
+        engineRef.current.position.y = THREE.MathUtils.lerp(engineRef.current.position.y, 0, delta * 5.0);
+        engineRef.current.position.z = THREE.MathUtils.lerp(engineRef.current.position.z, 0, delta * 5.0);
+        engineRef.current.position.x = THREE.MathUtils.lerp(engineRef.current.position.x, 0, delta * 5.0);
+      }
+    }
   });
 
   const getCht = (cyl: number) => {
@@ -615,10 +655,12 @@ export function Scene3D({
   config,
   livePacket,
   onSelectCylinder,
+  onToggleSixDofPose,
 }: {
   config: SceneConfig;
   livePacket: LiveTelemetryPacket | null;
   onSelectCylinder: (id: number) => void;
+  onToggleSixDofPose?: () => void;
 }) {
   const controlsRef = useRef<any>(null);
 
@@ -688,6 +730,52 @@ export function Scene3D({
           }}
         />
       </Canvas>
+
+      {/* 6-DOF Body Pose HUD Telemetry Strip */}
+      <div
+        className="absolute bottom-3 left-3 flex items-center gap-2 p-1.5 px-2.5 font-mono-tech text-[9.5px] rounded-none z-10 select-none pointer-events-auto"
+        style={{
+          background: "rgba(255, 255, 255, 0.92)",
+          backdropFilter: "blur(6px)",
+          border: "1px solid var(--line)",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+        }}
+      >
+        <button
+          onClick={onToggleSixDofPose}
+          className="flex items-center gap-1.5 px-1.5 py-0.5 font-bold cursor-pointer transition-all"
+          style={{
+            background: config.sixDofFlightPose !== false ? "var(--teal)" : "var(--panel2)",
+            color: config.sixDofFlightPose !== false ? "#FFFFFF" : "var(--text-dim)",
+            border: config.sixDofFlightPose !== false ? "1px solid var(--teal)" : "1px solid var(--line)",
+          }}
+          title="Toggle 6-DOF dynamic flight attitude pose vs static testbed"
+        >
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: config.sixDofFlightPose !== false ? "#FFFFFF" : "var(--text-faint)" }} />
+          6-DOF POSE: {config.sixDofFlightPose !== false ? "ACTIVE" : "STATIC"}
+        </button>
+
+        {config.sixDofState && (
+          <div className="flex items-center gap-2" style={{ color: "var(--text-dim)" }}>
+            <span>
+              φ: <b style={{ color: "var(--teal)" }}>{config.sixDofState.roll > 0 ? `+${config.sixDofState.roll.toFixed(1)}°` : `${config.sixDofState.roll.toFixed(1)}°`}</b>
+            </span>
+            <span>
+              θ: <b style={{ color: "#0B8F46" }}>{config.sixDofState.pitch > 0 ? `+${config.sixDofState.pitch.toFixed(1)}°` : `${config.sixDofState.pitch.toFixed(1)}°`}</b>
+            </span>
+            <span>
+              ψ: <b style={{ color: "var(--text)" }}>{Math.round(config.sixDofState.yaw)}°</b>
+            </span>
+            <span style={{ color: "var(--line)" }}>|</span>
+            <span>
+              ax: <b style={{ color: "#FF681F" }}>{config.sixDofState.surgeAx > 0 ? `+${config.sixDofState.surgeAx.toFixed(2)}` : config.sixDofState.surgeAx.toFixed(2)}g</b>
+            </span>
+            <span>
+              az: <b style={{ color: "var(--text)" }}>{config.sixDofState.heaveAz.toFixed(2)}g</b>
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

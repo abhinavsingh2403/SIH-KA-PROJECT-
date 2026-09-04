@@ -152,3 +152,22 @@ export function ResidualDeltaIcon({ className = "w-3.5 h-3.5", size = 14, color 
     </svg>
   );
 }
+
+/** 12. Six Degrees of Freedom (6-DOF) Flight Dynamics & Inertial Gyro Gimbal */
+export function SixDofGimbalIcon({ className = "w-3.5 h-3.5", size = 14, color = "currentColor" }: AerospaceIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      {/* 3D Coordinate Gimbal Spheres & Axes */}
+      <circle cx="12" cy="12" r="9.5" stroke={color} strokeWidth="1.4" strokeDasharray="3 2" opacity="0.6" />
+      <ellipse cx="12" cy="12" rx="9.5" ry="3.8" stroke={color} strokeWidth="1.3" />
+      <line x1="12" y1="2.5" x2="12" y2="21.5" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
+      <line x1="2.5" y1="12" x2="21.5" y2="12" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
+      {/* Dynamic Rotation Arc Indicator */}
+      <path d="M16 6.5C18 8 19 10 19 12" stroke="#FF681F" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M19 10L19 12.5L16.5 12" stroke="#FF681F" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Central Inertial IMU Origin */}
+      <circle cx="12" cy="12" r="1.8" fill={color} />
+    </svg>
+  );
+}
+

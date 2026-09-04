@@ -242,16 +242,16 @@ export function Dashboard({
     <div className="h-screen w-screen flex flex-col overflow-hidden select-none" style={{ background: "var(--bg)", padding: "18px", gap: "14px" }}>
 
       {/* ═══ HEADER ═══════════════════════════════════════════════════════════ */}
-      <header className="dt-panel" style={{ padding: "14px 22px", flexShrink: 0 }}>
+      <header className="dt-panel-elevated" style={{ padding: "14px 22px", flexShrink: 0 }}>
         {/* Top Row */}
         <div className="flex items-center justify-between">
           {/* Brand */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center text-white font-bold text-[11px] tracking-wide" style={{ width: 34, height: 34, background: "var(--text)" }}>SIH</div>
+              <div className="flex items-center justify-center text-white font-bold text-[11px]" style={{ width: 36, height: 36, background: "var(--text)", letterSpacing: "0.12em" }}>SIH</div>
               <div>
-                <div className="text-[15px] font-semibold" style={{ color: "var(--text)" }}>DRDO MALE UAV Digital Twin</div>
-                <div className="text-[11px]" style={{ color: "var(--text-dim)" }}>Aero piston engine · 15 channels · real-time</div>
+                <div className="text-[16px] font-bold" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>DRDO MALE UAV Digital Twin</div>
+                <div className="font-mono-tech text-[10.5px]" style={{ color: "var(--text-faint)", letterSpacing: "0.02em" }}>AERO PISTON ENGINE · 15 CHANNELS · REAL-TIME</div>
               </div>
             </div>
             <span className="font-mono-tech text-[11px]" style={{ color: "var(--text-dim)", border: "1px solid var(--line)", padding: "4px 10px" }}>
@@ -305,17 +305,21 @@ export function Dashboard({
 
         {/* KPI Bottom Row */}
         <div className="flex gap-8 items-center" style={{ paddingTop: 12, marginTop: 12, borderTop: "1px solid var(--line)" }}>
-          <div className="flex items-baseline gap-1.5 text-[12px]" style={{ color: "var(--text-dim)" }}>
-            PEAK CHT <b className={`font-mono-tech text-[13px] font-semibold ${maxCht > 200 ? "" : ""}`} style={{ color: maxCht > 200 ? "var(--ochre)" : "var(--text)" }}>{Math.round(maxCht)}°C</b>
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-mono-tech text-[10px] uppercase" style={{ color: "var(--text-faint)", letterSpacing: "0.05em" }}>Peak CHT</span>
+            <b className="font-mono-tech text-[15px] font-semibold" style={{ color: maxCht > 200 ? "var(--ochre)" : "var(--text)", letterSpacing: "-0.02em" }}>{Math.round(maxCht)}°C</b>
           </div>
-          <div className="flex items-baseline gap-1.5 text-[12px]" style={{ color: "var(--text-dim)" }}>
-            EGT SPREAD <b className="font-mono-tech text-[13px] font-semibold" style={{ color: "var(--text)" }}>{Math.round(egtSpread)}°C</b>
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-mono-tech text-[10px] uppercase" style={{ color: "var(--text-faint)", letterSpacing: "0.05em" }}>EGT Spread</span>
+            <b className="font-mono-tech text-[15px] font-semibold" style={{ color: "var(--text)", letterSpacing: "-0.02em" }}>{Math.round(egtSpread)}°C</b>
           </div>
-          <div className="flex items-baseline gap-1.5 text-[12px]" style={{ color: "var(--text-dim)" }}>
-            OIL PRESS <b className="font-mono-tech text-[13px] font-semibold" style={{ color: oilP < 45 ? "var(--red)" : "var(--text)" }}>{Math.round(oilP)} psi</b>
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-mono-tech text-[10px] uppercase" style={{ color: "var(--text-faint)", letterSpacing: "0.05em" }}>Oil Press</span>
+            <b className="font-mono-tech text-[15px] font-semibold" style={{ color: oilP < 45 ? "var(--red)" : "var(--text)", letterSpacing: "-0.02em" }}>{Math.round(oilP)} psi</b>
           </div>
-          <div className="flex items-baseline gap-1.5 text-[12px]" style={{ color: "var(--text-dim)" }}>
-            MAIN BUS <b className="font-mono-tech text-[13px] font-semibold" style={{ color: "var(--text)" }}>{bus1V.toFixed(1)} V</b>
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-mono-tech text-[10px] uppercase" style={{ color: "var(--text-faint)", letterSpacing: "0.05em" }}>Main Bus</span>
+            <b className="font-mono-tech text-[15px] font-semibold" style={{ color: "var(--text)", letterSpacing: "-0.02em" }}>{bus1V.toFixed(1)} V</b>
           </div>
           <div className="flex items-center gap-1.5 font-mono-tech text-[11px] ml-auto" style={{ color: "var(--teal)" }}>
             <span className="rounded-full" style={{ width: 6, height: 6, background: "var(--teal)" }} />
@@ -357,11 +361,11 @@ export function Dashboard({
             />
 
             {/* RPM Overlay */}
-            <div className="absolute top-3 left-3 dt-panel" style={{ padding: "8px 12px" }}>
-              <div className="font-mono-tech text-[18px] font-semibold" style={{ color: "var(--text)" }}>
+            <div className="absolute top-3 left-3" style={{ padding: "8px 12px", background: "rgba(255, 255, 255, 0.82)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid var(--line)" }}>
+              <div className="font-mono-tech text-[22px] font-bold" style={{ color: "var(--text)", letterSpacing: "-0.02em", lineHeight: 1 }}>
                 {currentRPM?.toLocaleString()}
               </div>
-              <div className="text-[10px]" style={{ color: "var(--text-faint)" }}>RPM · PROPELLER LOCKED</div>
+              <div className="font-mono-tech text-[9px] uppercase" style={{ color: "var(--text-faint)", letterSpacing: "0.08em", marginTop: 2 }}>RPM · PROPELLER LOCKED</div>
             </div>
 
             {/* Render Mode Buttons */}
@@ -370,16 +374,15 @@ export function Dashboard({
                 <button
                   key={m}
                   onClick={() => onChange({ renderMode: m })}
-                  className={`view-tab ${(config.renderMode || "solid") === m ? "active" : ""}`}
-                  style={{ fontSize: "10.5px", padding: "4px 10px" }}
+                  className={`viewport-overlay-btn ${(config.renderMode || "solid") === m ? "active" : ""}`}
                 >
                   {m === "solid" ? "Solid" : m === "flir" ? "FLIR" : "X-Ray"}
                 </button>
               ))}
               <button
                 onClick={() => onChange({ explodedView: !config.explodedView })}
-                className={`view-tab ${config.explodedView ? "active" : ""}`}
-                style={{ fontSize: "10.5px", padding: "4px 10px", marginLeft: 4 }}
+                className={`viewport-overlay-btn ${config.explodedView ? "active" : ""}`}
+                style={{ marginLeft: 4 }}
               >
                 <Maximize2 className="inline w-3 h-3 mr-1" />
                 {config.explodedView ? "Exploded" : "Assembled"}
@@ -413,11 +416,11 @@ export function Dashboard({
         <div className="flex flex-col min-h-0" style={{ gap: 14 }}>
 
           {/* AI Advisory Banner */}
-          <div className="advisory-box">
+          <div className={`advisory-box ${isAnomalous ? "fault" : ""}`}>
             <span className="advisory-badge" style={{ color: isAnomalous ? "var(--red)" : "var(--green)", borderColor: isAnomalous ? "var(--red)" : "var(--green)" }}>
               {isAnomalous ? "FAULT" : "NOMINAL"}
             </span>
-            <div className="flex-1 text-[13px]" style={{ lineHeight: 1.5 }}>
+            <div className="flex-1 text-[13px]" style={{ lineHeight: 1.6 }}>
               <b className="font-semibold">AI pilot advisory:</b> {livePacket?.alerts?.[0]?.report_text || healthRec}
             </div>
             <span className="font-mono-tech text-[10.5px] whitespace-nowrap" style={{ color: "var(--text-faint)" }}>
@@ -525,7 +528,7 @@ export function Dashboard({
             {/* ── What-If Tab ── */}
             {activeTab === "whatif" && (
               <div className="space-y-4">
-                <div style={{ padding: "14px 16px", background: "var(--ochre-bg)", border: "1px solid var(--ochre)" }}>
+                <div className="accent-left-bar accent-ochre" style={{ padding: "14px 16px 14px 18px", background: "var(--ochre-bg)", border: "1px solid var(--ochre)" }}>
                   <h3 className="text-[12px] font-semibold flex items-center gap-1.5" style={{ color: "var(--ochre)" }}>
                     <Sparkles className="w-3.5 h-3.5" /> FORWARD MISSION SURVIVABILITY PROJECTION
                   </h3>
@@ -554,10 +557,10 @@ export function Dashboard({
                 </div>
 
                 {whatIfResult && (
-                  <div className="dt-panel" style={{ padding: "16px" }}>
+                  <div className={`dt-panel accent-left-bar ${whatIfResult.survivability_pct < 50 ? "accent-red" : "accent-green"}`} style={{ padding: "16px" }}>
                     <div className="flex items-center justify-between">
-                      <span className="text-[12px] font-semibold">PROJECTED SURVIVABILITY:</span>
-                      <span className="font-mono-tech text-[14px] font-bold" style={{ color: whatIfResult.survivability_pct < 50 ? "var(--red)" : "var(--green)" }}>
+                      <span className="font-mono-tech text-[11px] uppercase font-semibold" style={{ color: "var(--text-dim)", letterSpacing: "0.04em" }}>Projected Survivability</span>
+                      <span className="font-mono-tech text-[16px] font-bold" style={{ color: whatIfResult.survivability_pct < 50 ? "var(--red)" : "var(--green)", letterSpacing: "-0.02em" }}>
                         {whatIfResult.survivability_pct}%
                       </span>
                     </div>
@@ -576,7 +579,7 @@ export function Dashboard({
             {/* ── Residuals Tab ── */}
             {activeTab === "residuals" && (
               <div className="space-y-3">
-                <div style={{ padding: "12px 14px", background: "var(--teal-bg)", border: "1px solid var(--teal)" }}>
+                <div className="accent-left-bar accent-teal" style={{ padding: "12px 14px 12px 16px", background: "var(--teal-bg)", border: "1px solid var(--teal)" }}>
                   <span className="text-[12px]" style={{ color: "var(--text)" }}>
                     <strong>Physical model residuals:</strong> Quantifies Δ = |y_measured − y_model| across all 15 sensor channels.
                   </span>
@@ -606,9 +609,9 @@ export function Dashboard({
       </div>
 
       {/* ═══ TRANSPORT BAR ════════════════════════════════════════════════════ */}
-      <div className="dt-panel flex items-center" style={{ padding: "12px 20px", gap: 16, flexShrink: 0 }}>
+      <div className={`transport-bar flex items-center ${isConnected ? "mission-active" : ""}`} style={{ padding: "12px 20px", gap: 16, flexShrink: 0 }}>
         <button onClick={() => (isPaused ? onResume() : onPause())} className="play-btn" title={isPaused ? "Resume" : "Pause"}>
-          {isPaused ? <Play className="w-3 h-3" style={{ marginLeft: 1 }} /> : <Pause className="w-3 h-3" />}
+          {isPaused ? <Play className="w-3.5 h-3.5" style={{ marginLeft: 1 }} /> : <Pause className="w-3.5 h-3.5" />}
         </button>
 
         <span className="font-mono-tech text-[11px]" style={{ color: "var(--text-dim)" }}>
@@ -617,8 +620,8 @@ export function Dashboard({
 
         <div className="flex-1 flex items-center" style={{ gap: 10 }}>
           <div className="flex-1 relative" style={{ height: 4, background: "var(--panel2)", border: "1px solid var(--line)" }}>
-            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${progressPct}%`, background: "var(--teal)" }} />
-            <div style={{ position: "absolute", left: `${progressPct}%`, top: "50%", transform: "translate(-50%, -50%)", width: 9, height: 9, background: "var(--teal)", borderRadius: "50%", cursor: "grab" }} />
+            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${progressPct}%`, background: "var(--teal)", transition: isSeeking ? "none" : "width 0.3s" }} />
+            <div style={{ position: "absolute", left: `${progressPct}%`, top: "50%", transform: "translate(-50%, -50%)", width: 10, height: 10, background: "var(--teal)", cursor: "grab", transition: isSeeking ? "none" : "left 0.3s" }} />
             <input
               type="range" min={0} max={totalFlightTime} step={1}
               value={Math.round(displayFlightTime)}
@@ -641,7 +644,7 @@ export function Dashboard({
           </div>
         </div>
 
-        <span className="font-mono-tech text-[11px]" style={{ color: "var(--text-dim)" }}>{progressPct}%</span>
+        <span className="font-mono-tech text-[11px] tabular-nums" style={{ color: "var(--text-dim)", minWidth: 28, textAlign: "right" }}>{progressPct}%</span>
 
         {([1.0, 5.0, 20.0] as const).map((spd) => (
           <button key={spd} onClick={() => onSetSpeed(spd)} className={`speed-btn ${currentSpeed === spd ? "active" : ""}`}>

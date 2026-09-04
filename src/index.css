@@ -21,6 +21,14 @@
   --red-bg: #FBEAE8;
   --amber: #A16207;
   --amber-bg: #FEF3C7;
+
+  /* Elevation shadows — military GCS depth layers */
+  --shadow-1: 0 1px 2px rgba(27, 31, 39, 0.04), 0 1px 3px rgba(27, 31, 39, 0.06);
+  --shadow-2: 0 2px 6px rgba(27, 31, 39, 0.06), 0 4px 12px rgba(27, 31, 39, 0.04);
+  --shadow-3: 0 8px 24px rgba(27, 31, 39, 0.12), 0 2px 8px rgba(27, 31, 39, 0.06);
+
+  /* Spring physics timing */
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html, body, #root {
@@ -33,6 +41,8 @@ html, body, #root {
   background-color: var(--bg);
   color: var(--text);
   font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ===== Typography ===== */
@@ -44,24 +54,30 @@ html, body, #root {
 }
 .tabular-nums { font-variant-numeric: tabular-nums; }
 
-/* ===== Panel System ===== */
+/* ===== Panel System with Elevation ===== */
 .dt-panel {
   background: var(--panel);
   border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
+}
+.dt-panel-elevated {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-2);
 }
 
 /* ===== Custom Scrollbar ===== */
-.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: var(--panel2); }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--line-strong); }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+.custom-scrollbar::-webkit-scrollbar { width: 3px; height: 3px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: transparent; border-radius: 0; }
+.custom-scrollbar:hover::-webkit-scrollbar-thumb { background: var(--line-strong); }
 
 /* ===== Health Chip Variants ===== */
 .chip-ok { color: var(--green); border: 1px solid var(--green); background: var(--green-bg); }
 .chip-warn { color: var(--amber); border: 1px solid var(--amber); background: var(--amber-bg); }
 .chip-abort { color: var(--red); border: 1px solid var(--red); background: var(--red-bg); }
 
-/* ===== Fault Button ===== */
+/* ===== Interactive Button Base ===== */
 .fault-btn {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 11px;
@@ -70,25 +86,32 @@ html, body, #root {
   background: var(--panel2);
   color: var(--text-dim);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.12s var(--ease-spring);
+  user-select: none;
 }
 .fault-btn:hover { border-color: var(--text-dim); color: var(--text); }
+.fault-btn:active { transform: scale(0.97); }
 .fault-btn.active { background: var(--text); color: var(--panel); border-color: var(--text); }
 .fault-btn.clean { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+.fault-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
 
 /* ===== View Tab Buttons ===== */
 .view-tab {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 11.5px;
+  font-weight: 500;
   color: var(--text-dim);
   background: var(--panel2);
   border: 1px solid var(--line);
   padding: 6px 12px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.12s var(--ease-spring);
+  user-select: none;
 }
 .view-tab:hover { color: var(--text); border-color: var(--line-strong); }
+.view-tab:active { transform: scale(0.97); }
 .view-tab.active { background: var(--text); color: var(--panel); border-color: var(--text); }
+.view-tab:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
 
 /* ===== Speed Button ===== */
 .speed-btn {
@@ -99,15 +122,18 @@ html, body, #root {
   background: var(--panel2);
   color: var(--text-dim);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.12s var(--ease-spring);
+  user-select: none;
 }
 .speed-btn:hover { border-color: var(--text-dim); }
-.speed-btn.active { background: var(--text); color: var(--panel); border-color: var(--text); }
+.speed-btn:active { transform: scale(0.97); }
+.speed-btn.active { background: var(--teal); color: #fff; border-color: var(--teal); }
+.speed-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
 
 /* ===== Play Button ===== */
 .play-btn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: 1px solid var(--line-strong);
   background: var(--panel2);
   display: flex;
@@ -115,11 +141,14 @@ html, body, #root {
   justify-content: center;
   cursor: pointer;
   font-size: 12px;
-  transition: all 0.15s;
+  transition: all 0.12s var(--ease-spring);
+  user-select: none;
 }
 .play-btn:hover { border-color: var(--text-dim); background: var(--panel); }
+.play-btn:active { transform: scale(0.94); }
+.play-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
 
-/* ===== Advisory ===== */
+/* ===== Advisory Banner ===== */
 .advisory-box {
   border: 1px solid var(--line-strong);
   background: var(--panel2);
@@ -127,7 +156,19 @@ html, body, #root {
   display: flex;
   gap: 12px;
   align-items: flex-start;
+  position: relative;
+  box-shadow: var(--shadow-1);
 }
+.advisory-box::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--green);
+}
+.advisory-box.fault::before { background: var(--red); }
 .advisory-badge {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 10px;
@@ -136,11 +177,85 @@ html, body, #root {
   border: 1px solid;
 }
 
+/* ===== Divider Vertical ===== */
+.divider-v {
+  width: 1px;
+  height: 28px;
+  background: var(--line);
+  flex-shrink: 0;
+}
+
+/* ===== Custom Range Slider ===== */
+input[type="range"].gcs-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+}
+input[type="range"].gcs-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+}
+input[type="range"].gcs-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  background: var(--teal);
+  border: none;
+  margin-top: -4px;
+  cursor: grab;
+}
+input[type="range"].gcs-slider::-webkit-slider-thumb:active { cursor: grabbing; }
+input[type="range"].gcs-slider::-moz-range-track {
+  height: 4px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+}
+input[type="range"].gcs-slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  background: var(--teal);
+  border: none;
+  border-radius: 0;
+  cursor: grab;
+}
+
+/* ===== 3D Viewport Floating Controls ===== */
+.viewport-overlay-btn {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10.5px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: all 0.12s var(--ease-spring);
+  user-select: none;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--text-dim);
+}
+.viewport-overlay-btn:hover { color: var(--text); border-color: var(--line-strong); }
+.viewport-overlay-btn:active { transform: scale(0.97); }
+.viewport-overlay-btn.active {
+  background: var(--text);
+  color: var(--panel);
+  border-color: var(--text);
+  backdrop-filter: none;
+}
+
 /* ===== Modal Overlay ===== */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(27, 31, 39, 0.3);
+  background: rgba(27, 31, 39, 0.24);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -150,9 +265,48 @@ html, body, #root {
 .modal-panel {
   background: var(--panel);
   border: 1px solid var(--line);
+  box-shadow: var(--shadow-3);
   max-width: 640px;
   width: 100%;
   padding: 20px;
   max-height: 88vh;
   overflow-y: auto;
 }
+
+/* ===== Transport Bar Accent ===== */
+.transport-bar {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-2);
+  position: relative;
+}
+.transport-bar.mission-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--teal);
+}
+
+/* ===== Alternating Row Tint (Residuals Grid) ===== */
+.alt-tint:nth-child(odd) { background: var(--panel); }
+.alt-tint:nth-child(even) { background: var(--panel2); }
+
+/* ===== Left Accent Bar Utility ===== */
+.accent-left-bar {
+  position: relative;
+}
+.accent-left-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+}
+.accent-left-bar.accent-green::before { background: var(--green); }
+.accent-left-bar.accent-red::before { background: var(--red); }
+.accent-left-bar.accent-teal::before { background: var(--teal); }
+.accent-left-bar.accent-ochre::before { background: var(--ochre); }

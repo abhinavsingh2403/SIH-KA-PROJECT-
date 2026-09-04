@@ -493,7 +493,7 @@ export function Dashboard({
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex" style={{ gap: 4 }}>
+          <div className="flex items-center flex-nowrap overflow-x-auto custom-scrollbar" style={{ gap: 4, flexShrink: 0 }}>
             {([
               { id: "telemetry" as const, label: "Live Telemetry", Icon: LiveStreamWaveIcon, color: "#0B8F46" },
               { id: "copilot" as const, label: "AI Copilot", Icon: TacticalCopilotIcon, color: "#FF681F" },
@@ -505,12 +505,12 @@ export function Dashboard({
                 onClick={() => setActiveTab(id)}
                 className={`view-tab flex items-center gap-1.5 ${activeTab === id ? "active" : ""}`}
               >
-                <Icon className="w-3.5 h-3.5" color={activeTab === id ? "#FFFFFF" : color} />
-                <span>{label}</span>
+                <Icon className="w-3.5 h-3.5 shrink-0" color={activeTab === id ? "#FFFFFF" : color} />
+                <span className="whitespace-nowrap">{label}</span>
               </button>
             ))}
 
-            <div className="ml-auto flex items-center" style={{ gap: 4 }}>
+            <div className="ml-auto flex items-center flex-nowrap shrink-0" style={{ gap: 4 }}>
               <button
                 onClick={() => setShowDebriefModal(true)}
                 className="view-tab flex items-center gap-1.5"

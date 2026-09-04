@@ -23,6 +23,8 @@ import {
   FleetMeshIcon,
   TacticalCopilotIcon,
   MissionForecastIcon,
+  LiveStreamWaveIcon,
+  ResidualDeltaIcon,
 } from "./AerospaceIcons";
 import { type LiveTelemetryPacket, type FederatedSummary } from "../types/telemetry";
 
@@ -493,13 +495,18 @@ export function Dashboard({
           {/* Tab Navigation */}
           <div className="flex" style={{ gap: 4 }}>
             {([
-              { id: "telemetry" as const, label: "Live Telemetry" },
-              { id: "copilot" as const, label: "AI Copilot" },
-              { id: "whatif" as const, label: "What-If" },
-              { id: "residuals" as const, label: "Residuals" },
-            ]).map(({ id, label }) => (
-              <button key={id} onClick={() => setActiveTab(id)} className={`view-tab ${activeTab === id ? "active" : ""}`}>
-                {label}
+              { id: "telemetry" as const, label: "Live Telemetry", Icon: LiveStreamWaveIcon, color: "#0B8F46" },
+              { id: "copilot" as const, label: "AI Copilot", Icon: TacticalCopilotIcon, color: "#FF681F" },
+              { id: "whatif" as const, label: "What-If", Icon: MissionForecastIcon, color: "#0284C7" },
+              { id: "residuals" as const, label: "Residuals", Icon: ResidualDeltaIcon, color: "#E11D48" },
+            ]).map(({ id, label, Icon, color }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`view-tab flex items-center gap-1.5 ${activeTab === id ? "active" : ""}`}
+              >
+                <Icon className="w-3.5 h-3.5" color={activeTab === id ? "#FFFFFF" : color} />
+                <span>{label}</span>
               </button>
             ))}
 

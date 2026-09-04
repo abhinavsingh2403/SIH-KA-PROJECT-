@@ -298,7 +298,7 @@ export function Dashboard({
             </div>
 
             <div className={`flex items-center gap-2 font-mono-tech text-[12px] ${healthChipClass}`} style={{ padding: "6px 12px" }}>
-              <span className="rounded-full" style={{ width: 7, height: 7, background: "currentColor" }} />
+              <span className="rounded-full beacon-pulse" style={{ width: 7, height: 7, background: "currentColor" }} />
               HEALTH {Math.round(healthScore)}% — {healthLabel}
             </div>
           </div>
@@ -323,7 +323,7 @@ export function Dashboard({
             <b className="font-mono-tech text-[15px] font-semibold" style={{ color: "var(--text)", letterSpacing: "-0.02em" }}>{bus1V.toFixed(1)} V</b>
           </div>
           <div className="flex items-center gap-1.5 font-mono-tech text-[11px] ml-auto" style={{ color: "var(--teal)" }}>
-            <span className="rounded-full" style={{ width: 6, height: 6, background: "var(--teal)" }} />
+            <span className="rounded-full beacon-pulse" style={{ width: 6, height: 6, background: "var(--teal)" }} />
             {isConnected ? "MISSION ACTIVE · WS 8000" : "SIMULATION MODE"}
           </div>
         </div>
@@ -354,19 +354,28 @@ export function Dashboard({
           </div>
 
           {/* 3D Canvas */}
-          <div className="flex-1 min-h-0 relative" style={{ background: "var(--panel2)", border: "1px solid var(--line)" }}>
+          <div className="flex-1 min-h-0 relative overflow-hidden" style={{ background: "var(--panel2)", border: "1px solid var(--line)" }}>
+            <div className="radar-scanline" />
             <Scene3D
               config={config}
               livePacket={livePacket}
               onSelectCylinder={(id) => onChange({ selectedCylinder: config.selectedCylinder === id ? null : id })}
             />
 
+            {/* Spatial Axis Coordinate Watermark */}
+            <div className="absolute bottom-2 left-3 font-mono-tech text-[9px] pointer-events-none select-none tracking-widest" style={{ color: "var(--text-faint)", opacity: 0.7 }}>
+              X: 0.00 · Y: +1.42 · Z: -0.38 [WGS-84 DRDO TEST CELL]
+            </div>
+
             {/* RPM Overlay */}
-            <div className="absolute top-3 left-3" style={{ padding: "8px 12px", background: "rgba(255, 255, 255, 0.82)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid var(--line)" }}>
+            <div className="absolute top-3 left-3 shadow-xs" style={{ padding: "8px 12px", background: "rgba(255, 255, 255, 0.88)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid var(--line)" }}>
               <div className="font-mono-tech text-[22px] font-bold" style={{ color: "var(--text)", letterSpacing: "-0.02em", lineHeight: 1 }}>
                 {currentRPM?.toLocaleString()}
               </div>
-              <div className="font-mono-tech text-[9px] uppercase" style={{ color: "var(--text-faint)", letterSpacing: "0.08em", marginTop: 2 }}>RPM · PROPELLER LOCKED</div>
+              <div className="font-mono-tech text-[9px] uppercase flex items-center gap-1.5" style={{ color: "var(--text-faint)", letterSpacing: "0.08em", marginTop: 2 }}>
+                <span className="w-1.5 h-1.5 rounded-full beacon-pulse" style={{ background: "var(--teal)" }} />
+                RPM · PROPELLER LOCKED
+              </div>
             </div>
 
             {/* Render Mode Buttons */}

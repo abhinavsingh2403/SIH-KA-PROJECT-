@@ -310,3 +310,38 @@ input[type="range"].gcs-slider::-moz-range-thumb {
 .accent-left-bar.accent-red::before { background: var(--red); }
 .accent-left-bar.accent-teal::before { background: var(--teal); }
 .accent-left-bar.accent-ochre::before { background: var(--ochre); }
+
+/* ===== Engaging Aerospace Telemetry Mesh & Beacons ===== */
+@keyframes beaconPulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; filter: drop-shadow(0 0 6px currentColor); }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.beacon-pulse {
+  animation: beaconPulse 2s infinite ease-in-out;
+}
+
+@keyframes telemetryScan {
+  0% { transform: translateY(-100%); opacity: 0; }
+  50% { opacity: 0.4; }
+  100% { transform: translateY(1000%); opacity: 0; }
+}
+
+.radar-scanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, rgba(15, 110, 86, 0.6) 50%, transparent 100%);
+  pointer-events: none;
+  animation: telemetryScan 6s linear infinite;
+}
+
+/* Subtle aerospace tech grid pattern for 3D and panels */
+.tech-dot-grid {
+  background-image: radial-gradient(var(--line-strong) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+

@@ -118,16 +118,16 @@ function MultiLineChart({
     : null;
 
   return (
-    <div className="aero-panel p-3 space-y-2 select-none">
+    <div className="dt-panel p-3.5 space-y-2.5 select-none" style={{ background: "var(--panel)", borderColor: "var(--line)" }}>
       {/* Header with Fixed-Width Indicators to prevent horizontal shaking */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+      <div className="flex items-center justify-between pb-2" style={{ borderBottom: "1px solid var(--line)" }}>
         <div className="flex items-center gap-2">
-          <div className="p-1 rounded bg-sky-50 text-sky-600 border border-sky-100 shrink-0">
+          <div className="p-1.5 rounded-none shrink-0" style={{ background: "var(--panel2)", border: "1px solid var(--line-strong)", color: "var(--teal)" }}>
             <Icon className="w-3.5 h-3.5" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-slate-800 tracking-tight leading-none">{title}</h3>
-            <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{subtitle}</p>
+            <h3 className="text-[12px] font-bold tracking-tight leading-none" style={{ color: "var(--text)" }}>{title}</h3>
+            <p className="font-mono-tech text-[9.5px] leading-tight mt-0.5" style={{ color: "var(--text-faint)" }}>{subtitle}</p>
           </div>
         </div>
 
@@ -139,15 +139,16 @@ function MultiLineChart({
               <button
                 key={p.key}
                 onClick={() => onBadgeClick?.(p.key)}
-                className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
-                  isHighlighted
-                    ? "bg-sky-100 border-sky-400 font-bold text-sky-900 shadow-xs"
-                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                }`}
+                className="flex items-center gap-1.5 text-[10px] px-2 py-0.5 transition-all cursor-pointer font-mono-tech"
+                style={{
+                  background: isHighlighted ? "var(--text)" : "var(--panel2)",
+                  color: isHighlighted ? "var(--panel)" : "var(--text-dim)",
+                  border: isHighlighted ? "1px solid var(--text)" : "1px solid var(--line)",
+                }}
               >
-                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-                <span className="font-semibold text-slate-500">{p.name.split(" ")[0]}</span>
-                <span className="font-mono-tech font-bold text-slate-900 w-7 text-right inline-block tabular-nums">
+                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: p.color, boxShadow: `0 0 6px ${p.color}` }} />
+                <span className="font-semibold">{p.name.split(" ")[0]}</span>
+                <span className="font-bold w-8 text-right inline-block tabular-nums" style={{ color: isHighlighted ? "var(--panel)" : "var(--text)" }}>
                   {Math.round(p.currentVal)}
                 </span>
               </button>
@@ -161,7 +162,8 @@ function MultiLineChart({
         ref={containerRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        className="relative w-full h-[105px] overflow-hidden bg-slate-50/50 rounded border border-slate-100 cursor-crosshair"
+        className="relative w-full h-[105px] overflow-hidden cursor-crosshair"
+        style={{ background: "var(--panel2)", border: "1px solid var(--line)" }}
       >
         <svg
           viewBox={`0 0 ${width} ${height}`}
@@ -188,7 +190,7 @@ function MultiLineChart({
                   y1={y}
                   x2={width - padding.right}
                   y2={y}
-                  stroke="#e2e8f0"
+                  stroke="var(--line)"
                   strokeWidth={1}
                   strokeDasharray="2 3"
                 />
@@ -196,7 +198,8 @@ function MultiLineChart({
                   x={padding.left - 4}
                   y={y + 3}
                   textAnchor="end"
-                  className="text-[8px] fill-slate-400 font-mono-tech tabular-nums"
+                  className="font-mono-tech tabular-nums"
+                  style={{ fill: "var(--text-faint)", fontSize: "8.5px" }}
                 >
                   {val}
                 </text>
@@ -211,7 +214,7 @@ function MultiLineChart({
               y1={cautionY}
               x2={width - padding.right}
               y2={cautionY}
-              stroke="#f59e0b"
+              stroke="var(--amber)"
               strokeWidth={1}
               strokeDasharray="3 3"
             />
@@ -224,7 +227,7 @@ function MultiLineChart({
               y1={criticalY}
               x2={width - padding.right}
               y2={criticalY}
-              stroke="#ef4444"
+              stroke="var(--red)"
               strokeWidth={1}
               strokeDasharray="3 3"
             />
@@ -299,58 +302,66 @@ function ElectricalBusSection({ packet }: { packet: LiveTelemetryPacket | null }
   const a2 = packet?.channels?.amp2 ?? 31.8;
 
   return (
-    <div className="aero-panel p-3 space-y-2 select-none">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+    <div className="dt-panel p-3.5 space-y-2.5 select-none" style={{ background: "var(--panel)", borderColor: "var(--line)" }}>
+      <div className="flex items-center justify-between pb-2" style={{ borderBottom: "1px solid var(--line)" }}>
         <div className="flex items-center gap-2">
-          <div className="p-1 rounded bg-amber-50 text-amber-600 border border-amber-100 shrink-0">
+          <div className="p-1.5 rounded-none shrink-0" style={{ background: "var(--panel2)", border: "1px solid var(--line-strong)", color: "var(--ochre)" }}>
             <Zap className="w-3.5 h-3.5" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-slate-800 tracking-tight leading-none">28V DC Electrical Generation</h3>
-            <p className="text-[10px] text-slate-400 leading-tight mt-0.5">Dual Alternator / Bus Load Distribution</p>
+            <h3 className="text-[12px] font-bold tracking-tight leading-none" style={{ color: "var(--text)" }}>28V DC Electrical Generation</h3>
+            <p className="font-mono-tech text-[9.5px] leading-tight mt-0.5" style={{ color: "var(--text-faint)" }}>Dual Alternator / Bus Load Distribution</p>
           </div>
         </div>
-        <span className="text-[9px] font-mono-tech px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+        <span className="text-[9.5px] font-mono-tech px-2 py-0.5 font-bold" style={{ color: "var(--green)", background: "var(--green-bg)", border: "1px solid var(--green)" }}>
           28V REGULATED
         </span>
       </div>
 
       <div className="grid grid-cols-2 gap-2.5">
         {/* Bus 1 */}
-        <div className="p-2 rounded bg-slate-50 border border-slate-200/80 space-y-1">
+        <div className="p-2.5 space-y-1.5" style={{ background: "var(--panel2)", border: "1px solid var(--line)" }}>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-700">BUS 1 (PRIMARY)</span>
-            <span className={`text-xs font-mono-tech font-bold tabular-nums ${v1 < 26 ? "text-red-600" : "text-sky-700"}`}>
+            <span className="font-mono-tech text-[10px] font-bold" style={{ color: "var(--text-dim)" }}>BUS 1 (PRIMARY)</span>
+            <span className="font-mono-tech text-[13px] font-bold tabular-nums" style={{ color: v1 < 26 ? "var(--red)" : "var(--teal)" }}>
               {v1.toFixed(1)} V
             </span>
           </div>
-          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+          <div style={{ height: 4, background: "var(--panel)", border: "1px solid var(--line)" }}>
             <div
-              className={`h-full transition-all duration-200 ${v1 < 26 ? "bg-red-500" : "bg-sky-500"}`}
-              style={{ width: `${Math.min(100, Math.max(0, ((v1 - 22) / (32 - 22)) * 100))}%` }}
+              style={{
+                height: "100%",
+                width: `${Math.min(100, Math.max(0, ((v1 - 22) / (32 - 22)) * 100))}%`,
+                background: v1 < 26 ? "var(--red)" : "var(--teal)",
+                transition: "width 0.2s ease"
+              }}
             />
           </div>
-          <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono-tech">
+          <div className="flex items-center justify-between font-mono-tech text-[9.5px]" style={{ color: "var(--text-faint)" }}>
             <span>Load: {Math.round(a1)} A</span>
             <span>24 - 30V OK</span>
           </div>
         </div>
 
         {/* Bus 2 */}
-        <div className="p-2 rounded bg-slate-50 border border-slate-200/80 space-y-1">
+        <div className="p-2.5 space-y-1.5" style={{ background: "var(--panel2)", border: "1px solid var(--line)" }}>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-700">BUS 2 (ESSENTIAL)</span>
-            <span className={`text-xs font-mono-tech font-bold tabular-nums ${v2 < 26 ? "text-red-600" : "text-sky-700"}`}>
+            <span className="font-mono-tech text-[10px] font-bold" style={{ color: "var(--text-dim)" }}>BUS 2 (ESSENTIAL)</span>
+            <span className="font-mono-tech text-[13px] font-bold tabular-nums" style={{ color: v2 < 26 ? "var(--red)" : "var(--teal)" }}>
               {v2.toFixed(1)} V
             </span>
           </div>
-          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+          <div style={{ height: 4, background: "var(--panel)", border: "1px solid var(--line)" }}>
             <div
-              className={`h-full transition-all duration-200 ${v2 < 26 ? "bg-red-500" : "bg-sky-500"}`}
-              style={{ width: `${Math.min(100, Math.max(0, ((v2 - 22) / (32 - 22)) * 100))}%` }}
+              style={{
+                height: "100%",
+                width: `${Math.min(100, Math.max(0, ((v2 - 22) / (32 - 22)) * 100))}%`,
+                background: v2 < 26 ? "var(--red)" : "var(--teal)",
+                transition: "width 0.2s ease"
+              }}
             />
           </div>
-          <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono-tech">
+          <div className="flex items-center justify-between font-mono-tech text-[9.5px]" style={{ color: "var(--text-faint)" }}>
             <span>Load: {Math.round(a2)} A</span>
             <span>24 - 30V OK</span>
           </div>

@@ -400,15 +400,45 @@ export function Dashboard({
 
           {/* Fault Injection Row */}
           <div className="flex items-center gap-2 flex-wrap" style={{ marginTop: 14 }}>
-            <span className="flex items-center gap-1.5 text-[11px]" style={{ color: "var(--text-dim)", marginRight: 4 }}>
-              <AlertTriangle className="w-3 h-3" style={{ color: "var(--ochre)" }} />
-              FMEA fault injection
+            <span className="flex items-center gap-1.5 font-mono-tech text-[10.5px] uppercase font-semibold" style={{ color: "var(--text-faint)", letterSpacing: "0.04em", marginRight: 4 }}>
+              <AlertTriangle className="w-3.5 h-3.5" style={{ color: "var(--ochre)" }} />
+              FMEA Fault Inject
             </span>
-            <button onClick={() => onInjectFault("normal")} className={`fault-btn ${diagnosedFault === "normal" ? "clean" : ""}`}>Clean</button>
-            <button onClick={() => onInjectFault("cylinder_head_overheat", 2, 0.9)} className={`fault-btn ${diagnosedFault === "cylinder_head_overheat" ? "active" : ""}`}>Cyl 2 overheat</button>
-            <button onClick={() => onInjectFault("oil_cooler_degradation", undefined, 0.85)} className={`fault-btn ${diagnosedFault === "oil_cooler_degradation" ? "active" : ""}`}>Oil loss</button>
-            <button onClick={() => onInjectFault("alternator_rectifier_drift", undefined, 0.8)} className={`fault-btn ${diagnosedFault === "alternator_rectifier_drift" ? "active" : ""}`}>Alternator sag</button>
-            <button onClick={() => onInjectFault("fuel_flow_oscillation", undefined, 0.75)} className={`fault-btn ${diagnosedFault === "fuel_flow_oscillation" ? "active" : ""}`}>Fuel starvation</button>
+            <button
+              onClick={() => onInjectFault("normal")}
+              className={`fault-btn flex items-center gap-1.5 ${diagnosedFault === "normal" ? "clean" : ""}`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: diagnosedFault === "normal" ? "var(--green)" : "var(--text-faint)", boxShadow: diagnosedFault === "normal" ? "0 0 5px var(--green)" : "none" }} />
+              Clean
+            </button>
+            <button
+              onClick={() => onInjectFault("cylinder_head_overheat", 2, 0.9)}
+              className={`fault-btn flex items-center gap-1.5 ${diagnosedFault === "cylinder_head_overheat" ? "active" : ""}`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: diagnosedFault === "cylinder_head_overheat" ? "var(--red)" : "var(--text-faint)", boxShadow: diagnosedFault === "cylinder_head_overheat" ? "0 0 5px var(--red)" : "none" }} />
+              Cyl 2 Overheat
+            </button>
+            <button
+              onClick={() => onInjectFault("oil_cooler_degradation", undefined, 0.85)}
+              className={`fault-btn flex items-center gap-1.5 ${diagnosedFault === "oil_cooler_degradation" ? "active" : ""}`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: diagnosedFault === "oil_cooler_degradation" ? "var(--ochre)" : "var(--text-faint)", boxShadow: diagnosedFault === "oil_cooler_degradation" ? "0 0 5px var(--ochre)" : "none" }} />
+              Oil Loss
+            </button>
+            <button
+              onClick={() => onInjectFault("alternator_rectifier_drift", undefined, 0.8)}
+              className={`fault-btn flex items-center gap-1.5 ${diagnosedFault === "alternator_rectifier_drift" ? "active" : ""}`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: diagnosedFault === "alternator_rectifier_drift" ? "var(--amber)" : "var(--text-faint)", boxShadow: diagnosedFault === "alternator_rectifier_drift" ? "0 0 5px var(--amber)" : "none" }} />
+              Alternator Sag
+            </button>
+            <button
+              onClick={() => onInjectFault("fuel_flow_oscillation", undefined, 0.75)}
+              className={`fault-btn flex items-center gap-1.5 ${diagnosedFault === "fuel_flow_oscillation" ? "active" : ""}`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: diagnosedFault === "fuel_flow_oscillation" ? "var(--amber)" : "var(--text-faint)", boxShadow: diagnosedFault === "fuel_flow_oscillation" ? "0 0 5px var(--amber)" : "none" }} />
+              Fuel Starvation
+            </button>
           </div>
         </div>
 
@@ -429,11 +459,11 @@ export function Dashboard({
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex" style={{ gap: 2 }}>
+          <div className="flex" style={{ gap: 4 }}>
             {([
-              { id: "telemetry" as const, label: "Telemetry" },
-              { id: "copilot" as const, label: "AI copilot" },
-              { id: "whatif" as const, label: "What-if" },
+              { id: "telemetry" as const, label: "Live Telemetry" },
+              { id: "copilot" as const, label: "AI Copilot" },
+              { id: "whatif" as const, label: "What-If" },
               { id: "residuals" as const, label: "Residuals" },
             ]).map(({ id, label }) => (
               <button key={id} onClick={() => setActiveTab(id)} className={`view-tab ${activeTab === id ? "active" : ""}`}>
@@ -441,26 +471,26 @@ export function Dashboard({
               </button>
             ))}
 
-            <div className="ml-auto flex items-center" style={{ gap: 6 }}>
+            <div className="ml-auto flex items-center" style={{ gap: 4 }}>
               <button
                 onClick={() => setShowDebriefModal(true)}
-                className="view-tab flex items-center gap-1"
+                className="view-tab flex items-center gap-1.5"
               >
-                <FileText className="w-3 h-3" />
+                <FileText className="w-3 h-3 text-slate-500" />
                 Debrief
               </button>
               <button
                 onClick={() => { loadSupabaseData(); setShowSupabaseModal(true); }}
-                className="view-tab flex items-center gap-1"
+                className="view-tab flex items-center gap-1.5"
               >
-                <Database className="w-3 h-3" />
+                <Database className="w-3 h-3 text-slate-500" />
                 Database
               </button>
               <button
                 onClick={() => { onTriggerFederated(); setShowFleetModal(true); }}
-                className="view-tab flex items-center gap-1"
+                className="view-tab flex items-center gap-1.5"
               >
-                <Users className="w-3 h-3" />
+                <Users className="w-3 h-3 text-slate-500" />
                 FedAvg
               </button>
             </div>

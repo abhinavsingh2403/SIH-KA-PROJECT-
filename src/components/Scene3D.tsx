@@ -623,7 +623,7 @@ export function Scene3D({
   const controlsRef = useRef<any>(null);
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-slate-100 select-none">
+    <div className="w-full h-full relative overflow-hidden select-none" style={{ background: "var(--panel2)" }}>
       <Canvas
         camera={{ position: [5.2, 3.6, 5.8], fov: 38 }}
         dpr={[1, 2]}
@@ -633,21 +633,21 @@ export function Scene3D({
         <CameraController preset={config.cameraPreset} controlsRef={controlsRef} />
 
         {/* Aerospace Cleanroom Studio Environment */}
-        <color attach="background" args={["#f1f5f9"]} />
-        <fog attach="fog" args={["#f1f5f9", 14, 35]} />
+        <color attach="background" args={["#EBEBE6"]} />
+        <fog attach="fog" args={["#EBEBE6", 14, 35]} />
 
         {/* HDRI Studio Lighting Reflection Map */}
         <Environment preset="city" />
 
         {/* Studio Lighting Rig (Neutral High-Fidelity Aerospace Studio) */}
-        <ambientLight intensity={1.1} />
-        <directionalLight position={[10, 16, 12]} intensity={2.2} color="#ffffff" />
-        <directionalLight position={[-8, 6, -6]} intensity={0.95} color="#e0f2fe" />
-        <pointLight position={[0, 4, 3]} intensity={0.4} color="#ffffff" />
-        <pointLight position={[0, -2, -4]} intensity={0.3} color="#f8fafc" />
+        <ambientLight intensity={1.2} />
+        <directionalLight position={[10, 16, 12]} intensity={2.4} color="#FFFFFF" />
+        <directionalLight position={[-8, 6, -6]} intensity={0.95} color="#E4E3DD" />
+        <pointLight position={[0, 4, 3]} intensity={0.45} color="#FFFFFF" />
+        <pointLight position={[0, -2, -4]} intensity={0.3} color="#F7F7F5" />
 
         {/* Precision Test Cell Floor Grid */}
-        <gridHelper args={[24, 24, "#94a3b8", "#cbd5e1"]} position={[0, -1.8, 0]} />
+        <gridHelper args={[24, 24, "#CFCDC4", "#DFDDD5"]} position={[0, -1.8, 0]} />
 
         {/* Ground Contact Shadows */}
         <ContactShadows
